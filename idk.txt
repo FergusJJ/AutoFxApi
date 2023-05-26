@@ -1,0 +1,103 @@
+from playwright.sync_api import sync_playwright, BrowserContext
+import time #line:2
+import requests #line:3
+import sys #line:4
+import datetime
+
+def scroll (OO0OOO0000OOOO0O0 ,OOOOOOO0OOO00OOO0 :int ):#line:9
+    for _O0OOO0000OOO00OO0 in range (OOOOOOO0OOO00OOO0 ):#line:10
+        OO0OOO0000OOOO0O0.mouse.wheel (0 ,100 )#line:11
+
+def get_positions (OOO0OO00O0O0OOOO0 :BrowserContext ,O0000O00O0OO0OO0O :str ):#line:14
+    O00O0O0000OOOO0O0 =OOO0OO00O0O0OOOO0 .new_page ()#line:15
+    O0000O0OO0O000000 =[]#line:16
+    OOO00OO0OO0OO0O0O =[]#line:17
+    O00O0O0000OOOO0O0 .goto (f"https://ct-sc.icmarkets.com/profiles/{O0000O00O0OO0OO0O}")#line:19
+    while O00O0O0000OOOO0O0 .query_selector ('div[data-test-id="starting-balance"] span')is None :#line:22
+        time .sleep (0.01 )#line:23
+    print ("page loaded")#line:25
+    while True :#line:27
+        O00O0O0000OOOO0O0 .mouse .wheel (0 ,500 )#line:28
+        O0OO0000O0O000O00 =O00O0O0000OOOO0O0 .query_selector_all ('div[data-test-id="table-row"]')#line:29
+        if len (O0OO0000O0O000O00 )==0 :#line:30
+            time .sleep (0.01 )#line:31
+            continue #line:32
+        while True :#line:34
+            O0OOO0O0O0O0OO0OO =False #line:35
+            for O0000000O000OO0O0 in O0OO0000O0O000O00 :#line:36
+                O0OOO0OO00OOOOOOO =O0000000O000OO0O0 .query_selector_all (":scope > div")#line:37
+                O000000OOO0O0OO0O =O0OOO0OO00OOOOOOO [0 ].inner_text ().strip ()#line:38
+                if O000000OOO0O0OO0O in O0000O0OO0O000000 :#line:40
+                    continue #line:41
+                OOO00OO0OO0OO0O0O .append ({"id":O000000OOO0O0OO0O ,"created":O0OOO0OO00OOOOOOO [1 ].inner_text ().strip (),"symbol":O0OOO0OO00OOOOOOO [2 ].inner_text ().strip (),"volume":O0OOO0OO00OOOOOOO [3 ].inner_text ().strip (),"direction":O0OOO0OO00OOOOOOO [4 ].inner_text ().strip (),"entry_price":O0OOO0OO00OOOOOOO [5 ].inner_text ().strip (),"current_price":O0OOO0OO00OOOOOOO [6 ].inner_text ().strip (),"swap":O0OOO0OO00OOOOOOO [7 ].inner_text ().strip (),"commission":O0OOO0OO00OOOOOOO [8 ].inner_text ().strip (),"closing_commission":O0OOO0OO00OOOOOOO [9 ].inner_text ().strip (),"channel":O0OOO0OO00OOOOOOO [10 ].inner_text ().strip (),"pips":O0OOO0OO00OOOOOOO [11 ].inner_text ().strip (),"gross_profit":O0OOO0OO00OOOOOOO [12 ].inner_text ().strip (),"net_profit":O0OOO0OO00OOOOOOO [13 ].inner_text ().strip ()})#line:58
+                O0000O0OO0O000000 .append (O000000OOO0O0OO0O )#line:59
+                O0OOO0O0O0O0OO0OO =True #line:60
+            if not O0OOO0O0O0O0OO0OO :#line:62
+                break #line:63
+            OOO0O0OOO00O000O0 =O00O0O0000OOOO0O0 .query_selector ("#ic_arrow_down")#line:65
+            if OOO0O0OOO00O000O0 is None :#line:66
+                break #line:67
+            OOO0O0OOO00O000O0 .click ()#line:69
+            time .sleep (0.1 )#line:70
+            O0OO0000O0O000O00 =O00O0O0000OOOO0O0 .query_selector_all ('div[data-test-id="table-row"]')#line:71
+        O00O0O0000OOOO0O0 .close ()#line:73
+        return OOO00OO0OO0OO0O0O #line:74
+
+def send_to_go(OOOOOOO0OOO0O00O0):
+
+    position_json = {
+        "ID": OOOOOOO0OOO0O00O0 ["id"],
+        "Created":OOOOOOO0OOO0O00O0 ["created"],
+        "Symbol":OOOOOOO0OOO0O00O0 ["symbol"],
+        "Volume":OOOOOOO0OOO0O00O0 ["volume"],
+        "Direction":OOOOOOO0OOO0O00O0 ["direction"],
+        "Entry":OOOOOOO0OOO0O00O0 ["entry_price"],
+        "Current":OOOOOOO0OOO0O00O0 ["current_price"],
+        "Swap":OOOOOOO0OOO0O00O0 ["swap"],
+        "Comissions":OOOOOOO0OOO0O00O0 ["commission"],
+        "ClosingComissions":OOOOOOO0OOO0O00O0 ["closing_commission"],
+        "Pips":OOOOOOO0OOO0O00O0 ["pips"],
+        "Gross":OOOOOOO0OOO0O00O0 ["gross_profit"],
+        "Net":OOOOOOO0OOO0O00O0 ["net_profit"],
+        "Channel":OOOOOOO0OOO0O00O0 ["channel"],
+        "Time":datetime.datetime.now().isoformat()
+
+    }
+    print(f"GOT POSITION:\n{position_json}\n")
+
+def send_webhook (O0O0OOO0OO0000000 ,OOOOOOO0OOO0O00O0 ):#line:77
+    OOO0O0OOO0O000O00 ={"embeds":[{"title":"New Position","color":16729856 ,"fields":[{"name":"ID","value":"`"+OOOOOOO0OOO0O00O0 ["id"]+"`"},{"name":"Created","value":"`"+OOOOOOO0OOO0O00O0 ["created"]+"`","inline":True },{"name":"Symbol","value":"`"+OOOOOOO0OOO0O00O0 ["symbol"]+"`","inline":True },{"name":"Volume","value":"`"+OOOOOOO0OOO0O00O0 ["volume"]+"`","inline":True },{"name":"Direction","value":"`"+OOOOOOO0OOO0O00O0 ["direction"]+"`","inline":True },{"name":"Entry Price","value":"`"+OOOOOOO0OOO0O00O0 ["entry_price"]+"`","inline":True },{"name":"Current Price","value":"`"+OOOOOOO0OOO0O00O0 ["current_price"]+"`","inline":True },{"name":"Swap","value":"`"+OOOOOOO0OOO0O00O0 ["swap"]+"`","inline":True },{"name":"Comissions","value":"`"+OOOOOOO0OOO0O00O0 ["commission"]+"`","inline":True },{"name":"Closing Comissions","value":"`"+OOOOOOO0OOO0O00O0 ["closing_commission"]+"`","inline":True },{"name":"Pips","value":"`"+OOOOOOO0OOO0O00O0 ["pips"]+"`","inline":True },{"name":"Gross Profit Est.","value":"`"+OOOOOOO0OOO0O00O0 ["gross_profit"]+"`","inline":True },{"name":"Net Profit Est.","value":"`"+OOOOOOO0OOO0O00O0 ["net_profit"]+"`","inline":True },{"name":"Channel","value":"`"+OOOOOOO0OOO0O00O0 ["channel"]+"`","inline":True }],"footer":{"text":"cTrader Tracker","icon_url":"https://ctrader.com/bundles/ctraderctdn/img/ctrader_round-logo.png?v1.9.9ext-1.discordapp.net/external/tuqPetYZ6pGhd3FjsWje-KaZWbaJlb8MH-Q0YSRg-tg/https/thunder-io.com/wp-content/uploads/2019/10/thundi.png"},"timestamp":datetime.datetime.now().isoformat()}],"username":"cTrader Tracker","avatar_url":"https://ctrader.com/bundles/ctraderctdn/img/ctrader_round-logo.png?v1.9.9",}#line:163
+    requests .post (O0O0OOO0OO0000000 ,json =OOO0O0OOO0O000O00 )#line:165
+
+
+if __name__ == "__main__":
+    headless = False
+    USER_ID = ""
+
+    webhook = "https://discord.com/api/webhooks/1103763677779329025/YI229q-zKbpDDXpx3B0Ebl06MCq57m0Bq8EWULDqTujLr5lKMidNw3D_QV0jNd85wx7q"
+    if len(sys.argv) != 3:
+        exit(1)
+    arg1 = sys.argv[1].split("=")
+    arg2 = sys.argv[2].split("=")
+    headless = arg1[1].lower() == "true"
+    USER_ID = arg2[1]   
+    print(f"headless: {headless}\nuser: {USER_ID}")
+    # USER_ID ="7venWwvj"#line:168
+    previous_positions =[]#line:171
+    playwright =sync_playwright().start()#line:172
+    browser =playwright.chromium .launch (headless =headless )#line:173
+    context =browser .new_context ()#line:174
+    while True :#line:175
+        now = time.time ()#line:176
+        positions =get_positions (context ,USER_ID )#line:177
+        print (f"Found and parsed {len(positions)} positions in {time.time() - now}s")#line:179
+        new_previous_positions =[]#line:181
+        for position in positions :#line:182
+            position_id =position ["id"]#line:183
+            new_previous_positions .append (position_id )#line:184
+            if position_id in previous_positions :#line:185
+                continue #line:186
+            send_webhook (webhook ,position )#line:188
+            send_to_go(position)
+            break
+        previous_positions =new_previous_positions #line:190
