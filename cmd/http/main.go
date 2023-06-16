@@ -52,7 +52,6 @@ func start(port string, cfg fiber.Config) (func(), error) {
 	go func() {
 		app.Listen(":" + port)
 	}()
-	//want to make sure that ActiveLicenseKeys & WsClients are synced, in case
 
 	return func() {
 		log.Println("running cleanup...")
