@@ -29,7 +29,7 @@ func main() {
 
 func start(sess *monitor.MonitorSession) (func(), error) {
 
-	cleanup, err := storage.RedisInitialise()
+	client, cleanup, err := storage.RedisInitialise()
 	if err != nil {
 		return cleanup, err
 	}
@@ -39,7 +39,7 @@ func start(sess *monitor.MonitorSession) (func(), error) {
 			log.Panicln(err)
 			return
 		}
-		monitor.Start(monitorSess)
+		monitor.Start(monitorSess, client)
 	}()
 	return cleanup, nil
 }

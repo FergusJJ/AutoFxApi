@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"api/internal/storage"
 	"log"
 	"time"
 
@@ -19,7 +20,7 @@ func Initialise() (*MonitorSession, error) {
 	return session, nil
 }
 
-func Start(session *MonitorSession) {
+func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext) {
 	go session.readPump()
 	go session.writePump()
 	session.monitor()
