@@ -14,11 +14,7 @@ func main() {
 		os.Exit(exitCode)
 	}()
 
-	session, err := monitor.Initialise()
-	if err != nil {
-		log.Fatalf("failed to start monitor: %v", err)
-	}
-	cleanup, err := start(session)
+	cleanup, err := start()
 	defer cleanup()
 	if err != nil {
 		exitCode = 1
@@ -27,7 +23,7 @@ func main() {
 	shutdown.Gracefully()
 }
 
-func start(sess *monitor.MonitorSession) (func(), error) {
+func start() (func(), error) {
 
 	client, cleanup, err := storage.RedisInitialise()
 	if err != nil {
@@ -39,7 +35,7 @@ func start(sess *monitor.MonitorSession) (func(), error) {
 			log.Panicln(err)
 			return
 		}
-		monitor.Start(monitorSess, client)
+		monitor.Start(monitorSess, client, nil)
 	}()
 	return cleanup, nil
 }

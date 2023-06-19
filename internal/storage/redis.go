@@ -8,7 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var redisAddr string = "127.0.0.1:6379"
+var redisAddr string = "redis:6379"
 var databaseID int = 0
 
 type RedisClientWithContext struct {
@@ -84,8 +84,24 @@ func (c *RedisClientWithContext) ComparePositions(storageSetName string, current
 			diffInCurrent = append(diffInCurrent, member)
 		}
 	}
-
+	if len(diffInCurrent) > 0 || len(diffInStorage) > 0 {
+		err := c.overrideSet(storageSetName, currentSet)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	return diffInStorage, diffInCurrent, nil
+}
+
+func (c *RedisClientWithContext) overrideSet(setKey string, members []string) error {
+	tx := c.RDB.TxPipeline()
+	tx.Del(c.Ctx, setKey)
+	tx.SAdd(c.Ctx, setKey, members)
+	_, err := tx.Exec(c.Ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // func SetKey

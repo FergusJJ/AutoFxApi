@@ -8,6 +8,8 @@ import (
 	"api/config"
 	"api/internal/http/middleware"
 	"api/internal/http/router"
+	"api/internal/monitor"
+	"api/internal/storage"
 	"api/pkg/shutdown"
 
 	"github.com/gofiber/fiber/v2"
@@ -15,7 +17,11 @@ import (
 
 type Server struct {
 	app *fiber.App
+	// CurrentMessage chan ([]byte)
+	RedisClient *storage.RedisClientWithContext
 }
+
+var server = &Server{}
 
 func main() {
 	var exitCode int
@@ -27,6 +33,7 @@ func main() {
 		CaseSensitive: true,
 		Prefork:       false,
 	}
+
 	port, err := config.Config("PORT")
 	if err != nil {
 		fmt.Printf("error: %v", err)
@@ -45,38 +52,62 @@ func main() {
 
 func start(port string, cfg fiber.Config) (func(), error) {
 
-	app, cleanup, err := buildServer(cfg)
+	cleanup, err := server.buildServer(cfg)
 	if err != nil {
 		return nil, err
 	}
 	go func() {
-		app.Listen(":" + port)
+		server.app.Listen(":" + port)
 	}()
 
 	return func() {
 		log.Println("running cleanup...")
 		cleanup()
-		app.Shutdown()
+		server.app.Shutdown()
 	}, nil
 }
 
-func buildServer(cfg fiber.Config) (*fiber.App, func(), error) {
-	app := fiber.New(cfg)
+func (server *Server) buildServer(cfg fiber.Config) (func(), error) {
+	server.app = fiber.New(cfg)
 
-	err := middleware.UseMiddlewares(app)
+	err := middleware.UseMiddlewares(server.app)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	err = router.SetupRoutes(app)
+	err = router.SetupRoutes(server.app)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return app, func() {
-		//cleanup operations, i.e. close db connection
-		log.Println("no cleanup required")
-	}, nil
+	client, cleanup, err := storage.RedisInitialise()
+	if err != nil {
+		return cleanup, err
+	}
+	server.RedisClient = client
+
+	go func() {
+		monitorSess, err := monitor.Initialise()
+		if err != nil {
+			log.Panicln(err)
+			return
+		}
+		tmpChan := make(chan []byte)
+		monitor.Start(monitorSess, server.RedisClient, tmpChan)
+
+		for {
+			select {
+			case val := <-tmpChan:
+				log.Println("-=-")
+				log.Println(val)
+
+				log.Println("-=-")
+
+			}
+		}
+	}()
+
+	return cleanup, nil
 }
 
 /*

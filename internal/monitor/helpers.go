@@ -3,6 +3,7 @@ package monitor
 import (
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -25,4 +26,13 @@ func splitTypeVal(typeValStr string) (string, string) {
 		log.Fatalf(`%s is formatted incorrectly`, typeValStr)
 	}
 	return typeValMap[0], typeValMap[1]
+}
+
+func positionsToPIDSlice(positions []OpenPosition) map[string]OpenPosition {
+	pids := map[string]OpenPosition{}
+	for _, position := range positions {
+		positionStr := strconv.Itoa(position.PositionID)
+		pids[positionStr] = position
+	}
+	return pids
 }

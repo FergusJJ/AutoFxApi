@@ -38,7 +38,6 @@ func (MessageBuf *MessageBuf) DecodeSpecific(payloadType int) (interface{}, erro
 		}
 	case 4259:
 		specificStruct = ProtoJMTraderPositionListRes{}
-		// log.Println(decodedPayload)
 		if err := mapstructure.Decode(decodedPayload, &specificStruct); err != nil {
 			return nil, err
 		}
@@ -62,10 +61,9 @@ func (messageProcessor *messageProcessor) parseInitialPayload(msgTypeFields map[
 			subArrayPosition := msgTypeFields[msgTypePosition][0] //the first index of msgTypeFields[msgTypePosition]
 			subKey := msgTypeFields[msgTypePosition][1]           //should be the name of the key
 			subValueType := msgTypeFields[msgTypePosition][2]     //the typing of the value associated with the key
-			additonalParam := ""                                  //I think this is just for msgTypes with arrays? Is only initialised if there is an extra entru in msgTypeFields
+			_ = ""                                                //I think this is just for msgTypes with arrays? Is only initialised if there is an extra entru in msgTypeFields
 			if len(msgTypeFields[msgTypePosition+1]) > 4 {
-				additonalParam = msgTypeFields[msgTypePosition][4]
-				log.Println(additonalParam)
+				_ = msgTypeFields[msgTypePosition][4] //additionalParam
 			}
 			var keyIndexStr string
 			if messageProcessor.path != "" {
@@ -104,10 +102,9 @@ func (messageProcessor *messageProcessor) decodeToSpecificPayload(msgTypeFields 
 			subArrayPosition := msgTypeFields[msgTypePosition][0] //the first index of msgTypeFields[msgTypePosition]
 			subKey := msgTypeFields[msgTypePosition][1]           //should be the name of the key
 			subValueType := msgTypeFields[msgTypePosition][2]     //the typing of the value associated with the key //will be ["repeated-simple", f()] for those types of payloads
-			additonalParam := ""                                  //I think this is just for msgTypes with arrays? Is only initialised if there is an extra entru in msgTypeFields
+			_ = ""                                                //I think this is just for msgTypes with arrays? Is only initialised if there is an extra entru in msgTypeFields
 			if len(msgTypeFields[msgTypePosition]) > 4 {
-				additonalParam = msgTypeFields[msgTypePosition][4]
-				log.Println(additonalParam)
+				_ = msgTypeFields[msgTypePosition][4]
 			}
 			var keyIndexStr string
 			if pathIndex != "" {
@@ -148,33 +145,6 @@ func (messageProcessor *messageProcessor) R_(combinedPos int) string {
 		return messageProcessor.E_(combinedPos)
 	}
 
-}
-
-// s_
-func (messageProcessor *messageProcessor) DecodeBytesPayload(msgTypeFields [][]string, decodedMessageStruct WsMessage[bytesPayload]) WsMessage[bytesPayload] {
-	for i := 0; i < len(msgTypeFields[1]); i++ {
-		subKey := msgTypeFields[1][1]
-		subValueType := msgTypeFields[1][2]
-		keyIndexStr := msgTypeFields[1][3]
-		additionalParam := ""
-		if len(msgTypeFields[1]) > 4 {
-			additionalParam = msgTypeFields[1][4]
-		}
-		_, keyIndex := splitTypeVal(keyIndexStr)
-		_, subKey = splitTypeVal(subKey)
-		structFieldValue := decodedMessageStruct.Payload.Get(subKey)
-		if keyIndex == "1" && structFieldValue == nil {
-			_, typeOfStructFieldValue := splitTypeVal(subValueType)
-			if additionalParam != "" {
-				log.Fatalf("unimplemented function for %v", msgTypeFields[1])
-			} else {
-				log.Println(typeOfStructFieldValue)
-				log.Fatalf("unimplemented function for %v", msgTypeFields[1])
-			}
-		}
-
-	}
-	return decodedMessageStruct
 }
 
 func DecodeInitial(messageProcessor *messageProcessor, subKey string, resultStruct WsMessage[bytesPayload], keyIndexStr, subValueType string) WsMessage[bytesPayload] {

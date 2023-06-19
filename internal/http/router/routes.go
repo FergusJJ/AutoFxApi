@@ -33,9 +33,13 @@ func SetupRoutes(app *fiber.App) error {
 		}
 	}()
 
+	handleWsMonitorWrapper := func(c *websocket.Conn) {
+		wsHandler.HandleWsMonitor(c)
+	}
+
 	app.Get("/whop/validate", handler.HandleWhopValidate)
 
-	app.Get("/ws/monitor", websocket.New(wsHandler.HandleWsMonitor))
+	app.Get("/ws/monitor", websocket.New(handleWsMonitorWrapper))
 
 	app.Use(func(c *fiber.Ctx) error {
 		c.SendStatus(404)

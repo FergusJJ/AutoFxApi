@@ -3,6 +3,7 @@ package handlers
 import (
 	handler "api/internal/http/handlers"
 	"api/pkg/ctrader"
+	"encoding/json"
 	"log"
 	"time"
 
@@ -14,6 +15,7 @@ var unregister = make(chan *websocket.Conn)
 var heartbeat = make(chan *websocket.Conn)
 var ack = make(chan *websocket.Conn)
 var errResp = make(chan *websocket.Conn)
+var currentMessage = make(chan []byte)
 
 func HandleWsMonitor(c *websocket.Conn) {
 	// It seems the we only need one SocketListener goroutine for the whole server.
@@ -35,7 +37,7 @@ func HandleWsMonitor(c *websocket.Conn) {
 	}(incomingId)
 
 	go heartbeatMonitor(c, unregister)
-	go sendMessages(c, unregister)
+	go sendMessages(c, unregister, currentMessage)
 	for {
 		messageType, message, err := c.ReadMessage()
 		if err != nil {
@@ -74,22 +76,28 @@ func heartbeatMonitor(c *websocket.Conn, unregister chan *websocket.Conn) {
 	}
 }
 
-func sendMessages(c *websocket.Conn, unregister chan *websocket.Conn) {
+func sendMessages(c *websocket.Conn, unregister chan *websocket.Conn, positionMessage chan ([]byte)) {
 	dummyEventInterval := time.Second * 10 // this would be an incoming message from the webhook
 	ticker := time.NewTicker(dummyEventInterval)
 
 	for {
 		select {
-		case <-ticker.C:
-			newMessage := ctrader.CtraderMonitorMessage{
-				Symbol:  "GBPUSD",
-				Message: time.Now().String(),
-			}
-			err := c.WriteJSON(newMessage)
+		case message := <-positionMessage:
+			// newMessage := ctrader.CtraderMonitorMessage{
+			// 	SymbolID: 43,
+			// 	// Message:  time.Now().String(),
+			// }
+			// err := c.WriteJSON(newMessage)
+			// if err != nil {
+			// 	log.Println("in ticker event dispatcher:", err)
+			// 	return
+			// }
+			messageJson := &ctrader.CtraderMonitorMessage{}
+			err := json.Unmarshal(message, messageJson)
 			if err != nil {
-				log.Println("in ticker event dispatcher:", err)
-				return
+				log.Fatal(err)
 			}
+			log.Printf("here %+v", messageJson)
 		case <-unregister:
 			ticker.Stop()
 			log.Println("unregistering heartbeat, conn closed")

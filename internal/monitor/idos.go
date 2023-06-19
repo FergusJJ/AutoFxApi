@@ -8,7 +8,7 @@ import (
 
 type WsClient struct {
 	Conn           *websocket.Conn
-	CurrentMessage chan ([]byte)
+	CurrentMessage []byte
 }
 
 // Encode.go
@@ -247,5 +247,7 @@ type messageProcessor struct {
 
 type MonitorSession struct {
 	Client      *WsClient
-	TraderLogin int
+	TraderLogin chan (int)
+	PlantID     chan (string)
+	Positions   chan ([]OpenPosition) //use to send from monitor reader -> redis checker
 }
