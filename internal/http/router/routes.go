@@ -10,7 +10,10 @@ import (
 	"github.com/gofiber/websocket/v2"
 )
 
-func SetupRoutes(app *fiber.App) error {
+// var monitorMessage = make(chan []byte)
+
+func SetupRoutes(app *fiber.App, signalNewPositions chan struct{}) error {
+
 	go func() {
 		staleCheckInterval := time.Second * 10
 		ticker := time.NewTicker(staleCheckInterval)
@@ -32,9 +35,9 @@ func SetupRoutes(app *fiber.App) error {
 			}
 		}
 	}()
-
 	handleWsMonitorWrapper := func(c *websocket.Conn) {
 		wsHandler.HandleWsMonitor(c)
+
 	}
 
 	app.Get("/whop/validate", handler.HandleWhopValidate)

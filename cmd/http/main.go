@@ -16,9 +16,9 @@ import (
 )
 
 type Server struct {
-	app *fiber.App
-	// CurrentMessage chan ([]byte)
-	RedisClient *storage.RedisClientWithContext
+	app            *fiber.App
+	CurrentMessage chan ([]byte)
+	RedisClient    *storage.RedisClientWithContext
 }
 
 var server = &Server{}
@@ -68,14 +68,15 @@ func start(port string, cfg fiber.Config) (func(), error) {
 }
 
 func (server *Server) buildServer(cfg fiber.Config) (func(), error) {
+	formattedPositions := make(chan struct{}, 1)
 	server.app = fiber.New(cfg)
-
+	server.CurrentMessage = make(chan []byte)
 	err := middleware.UseMiddlewares(server.app)
 	if err != nil {
 		return nil, err
 	}
 
-	err = router.SetupRoutes(server.app)
+	err = router.SetupRoutes(server.app, formattedPositions)
 	if err != nil {
 		return nil, err
 	}
@@ -86,27 +87,21 @@ func (server *Server) buildServer(cfg fiber.Config) (func(), error) {
 	}
 	server.RedisClient = client
 
-	go func() {
-		monitorSess, err := monitor.Initialise()
-		if err != nil {
-			log.Panicln(err)
-			return
-		}
-		tmpChan := make(chan []byte)
-		monitor.Start(monitorSess, server.RedisClient, tmpChan)
+	monitorSess, err := monitor.Initialise()
+	if err != nil {
+		log.Panicln(err)
+	}
 
+	monitor.Start(monitorSess, server.RedisClient, formattedPositions)
+	go func() {
 		for {
 			select {
-			case val := <-tmpChan:
-				log.Println("-=-")
-				log.Println(val)
-
-				log.Println("-=-")
+			case <-formattedPositions:
+				log.Printf("got positon signal")
 
 			}
 		}
 	}()
-
 	return cleanup, nil
 }
 

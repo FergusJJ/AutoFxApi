@@ -427,7 +427,7 @@ func (messageProcessor *messageProcessor) j(R bool, T, O int) string {
 	}
 
 	if A == 0 {
-		log.Fatal("check this condition in j")
+		// log.Fatal("check this condition in j")
 		A = int(1 - C)
 	} else {
 		if A == int(N) {
