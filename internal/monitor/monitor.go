@@ -20,85 +20,18 @@ func Initialise() (*MonitorSession, error) {
 	session.Client = &WsClient{Conn: conn, CurrentMessage: []byte{}}
 	session.TraderLogin = make(chan int)
 	session.PlantID = make(chan string)
-	session.Positions = make(chan []OpenPosition)
+	session.Positions = make(chan []OpenPosition, 1)
+	session.FormattedPositions = [][]byte{}
 	return session, nil
 }
 
-func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext, nextMessage chan<- []byte) {
-	go func() {
-		var positionsName = "testStoragePositions"
-		for {
-			select {
-			case positions := <-session.Positions:
-				log.Println("here")
-				// positions = []OpenPosition{}
-				if len(positions) == 0 {
-					continue
-				}
-				positionMapping := positionsToPIDSlice(positions)
-				pidsSlice := []string{}
-				for k := range positionMapping {
-					pidsSlice = append(pidsSlice, k)
-				}
-				closedPositions, openPositions, err := redisClient.ComparePositions(positionsName, pidsSlice)
-				if err != nil {
-					log.Fatal(err)
-				}
-				for _, pid := range closedPositions {
-					direction := ""
-					if positionMapping[pid].TradeSide == 2 {
-						direction = "SELL"
-					} else {
-						direction = "BUY"
-					}
-					currentMessageStruct := ctrader.CtraderMonitorMessage{
-						CopyPID:     pid,
-						SymbolID:    positionMapping[pid].Symbol.SymbolID,
-						Price:       positionMapping[pid].CurrentPrice, //send current price if position is closed
-						Volume:      positionMapping[pid].Volume,
-						Direction:   direction,
-						MessageType: "CLOSE",
-					}
-					_, err = json.Marshal(currentMessageStruct)
-					if err != nil {
-						log.Fatal(err)
-					}
-					log.Println(pid)
-					// nextMessage <- messageBytes
+func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext, signalNewPositions chan struct{}) {
+	// var nextMessage = make(chan []byte)
 
-				}
-				for _, pid := range openPositions {
-					direction := ""
-					if positionMapping[pid].TradeSide == 2 {
-						direction = "SELL"
-					} else {
-						direction = "BUY"
-					}
-					currentMessageStruct := ctrader.CtraderMonitorMessage{
-						CopyPID:     pid,
-						SymbolID:    positionMapping[pid].Symbol.SymbolID,
-						Price:       positionMapping[pid].EntryPrice, //send entry price if position is opened
-						Volume:      positionMapping[pid].Volume,
-						Direction:   direction,
-						MessageType: "OPEN",
-					}
-					_, err = json.Marshal(currentMessageStruct)
-					if err != nil {
-						log.Fatal(err)
-					}
-					log.Println(pid)
-					// nextMessage <- messageBytes
-				}
-
-			default:
-				// log.Println(<-session.Positions)
-
-			}
-		}
-	}()
+	//
+	go session.forwardPosititons(redisClient, signalNewPositions)
 	go session.writePump()
-	session.monitor()
-
+	go session.monitor()
 }
 
 func (session *MonitorSession) monitor() (exitCode int) {
@@ -134,7 +67,7 @@ func (session *MonitorSession) monitor() (exitCode int) {
 func (session *MonitorSession) writePump() {
 	var PlantId = ""
 	var TraderLogin = -1
-	pollPositionInterval := time.Millisecond * 500
+	pollPositionInterval := time.Millisecond * 1000
 	ticker := time.NewTicker(pollPositionInterval)
 	for {
 		select {
@@ -179,12 +112,6 @@ func (session *MonitorSession) processMessage() {
 
 	messageBuffer.Arr = initialDecode.Payload.Bytes
 
-	// messageBuffer.MessageType = SliceFromMessageType(initialDecode.PayloadType)
-	// decodedMessage, err := messageBuffer.DecodeSpecific(initialDecode.PayloadType)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
 	switch initialDecode.PayloadType {
 	case 4315:
 
@@ -213,16 +140,87 @@ func (session *MonitorSession) processMessage() {
 		if !ok {
 			log.Fatal("couldn't cast message to ProtoJMTraderPositionListRes")
 		}
-		log.Println("got positions")
-		//this blocks i think? Positions do continue to poll though so not sure
+
 		session.Positions <- message.Position
 
-		//send off to database, compare the new positons with ones in db
-		//send any new positions to app as new position
-		//send pid of newly closed position to app
 	default:
 		//other messages that aren't needed, just skip
 
 	}
 
+}
+
+func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClientWithContext, signalNewPositions chan struct{}) {
+
+	var positionsName = "testStoragePositions"
+	for {
+		select {
+		case <-session.Positions:
+			positions := <-session.Positions
+			// positions = []OpenPosition{}
+			if len(positions) == 0 {
+				log.Println("pos is 0 ")
+				continue
+			}
+			positionMapping := positionsToPIDSlice(positions)
+			pidsSlice := []string{}
+			for k := range positionMapping {
+				pidsSlice = append(pidsSlice, k)
+			}
+			closedPositions, openPositions, err := redisClient.ComparePositions(positionsName, pidsSlice)
+			if err != nil {
+				log.Fatal(err)
+			}
+			for _, pid := range closedPositions {
+				direction := ""
+				if positionMapping[pid].TradeSide == 2 {
+					direction = "SELL"
+				} else {
+					direction = "BUY"
+				}
+				currentMessageStruct := ctrader.CtraderMonitorMessage{
+					CopyPID:     pid,
+					SymbolID:    positionMapping[pid].Symbol.SymbolID,
+					Price:       positionMapping[pid].CurrentPrice, //send current price if position is closed
+					Volume:      positionMapping[pid].Volume,
+					Direction:   direction,
+					MessageType: "CLOSE",
+				}
+				messageBytes, err := json.Marshal(currentMessageStruct)
+				// _, err := json.Marshal(currentMessageStruct)
+				if err != nil {
+					log.Fatal(err)
+				}
+				session.FormattedPositions = append(session.FormattedPositions, messageBytes)
+
+				// nextMessage <- messageBytes
+
+			}
+			for _, pid := range openPositions {
+				direction := ""
+				if positionMapping[pid].TradeSide == 2 {
+					direction = "SELL"
+				} else {
+					direction = "BUY"
+				}
+				currentMessageStruct := ctrader.CtraderMonitorMessage{
+					CopyPID:     pid,
+					SymbolID:    positionMapping[pid].Symbol.SymbolID,
+					Price:       positionMapping[pid].EntryPrice, //send entry price if position is opened
+					Volume:      positionMapping[pid].Volume,
+					Direction:   direction,
+					MessageType: "OPEN",
+				}
+				messageBytes, err := json.Marshal(currentMessageStruct)
+				// _, err := json.Marshal(currentMessageStruct)
+				if err != nil {
+					log.Fatal(err)
+				}
+				session.FormattedPositions = append(session.FormattedPositions, messageBytes)
+				// nextMessage <- messageBytes
+			}
+			//signal that positions have been appended
+			signalNewPositions <- struct{}{}
+		}
+	}
 }
