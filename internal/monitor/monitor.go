@@ -26,9 +26,7 @@ func Initialise() (*MonitorSession, error) {
 }
 
 func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext, signalNewPositions chan struct{}) {
-	// var nextMessage = make(chan []byte)
 
-	//
 	go session.forwardPosititons(redisClient, signalNewPositions)
 	go session.writePump()
 	go session.monitor()
@@ -220,7 +218,10 @@ func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClien
 				// nextMessage <- messageBytes
 			}
 			//signal that positions have been appended
-			signalNewPositions <- struct{}{}
+			if len(session.FormattedPositions) > 0 {
+				signalNewPositions <- struct{}{}
+			}
+
 		}
 	}
 }

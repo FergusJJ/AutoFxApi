@@ -94,6 +94,7 @@ func (c *RedisClientWithContext) ComparePositions(storageSetName string, current
 }
 
 func (c *RedisClientWithContext) overrideSet(setKey string, members []string) error {
+	return nil
 	tx := c.RDB.TxPipeline()
 	tx.Del(c.Ctx, setKey)
 	tx.SAdd(c.Ctx, setKey, members)
