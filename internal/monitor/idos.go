@@ -246,9 +246,7 @@ type messageProcessor struct {
 }
 
 type MonitorSession struct {
-	Client             *WsClient
-	TraderLogin        chan (int)
-	PlantID            chan (string)
-	Positions          chan ([]OpenPosition) //use to send from monitor reader -> redis checker
-	FormattedPositions [][]byte
+	Client      *WsClient
+	TraderLogin chan (int)
+	PlantID     chan (string)
 }

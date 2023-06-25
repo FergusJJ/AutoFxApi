@@ -11,7 +11,13 @@ services:
       - .:/usr/src/fxapi
     depends_on:
       - redis
+      - monitor
     command: go run cmd/http/main.go
+  monitor:
+    build: .
+    depends_on:
+      - redis
+    command: go run cmd/monitor/main.go
   redis:
     image: redis:6.0.7
     container_name: redis

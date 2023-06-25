@@ -18,7 +18,7 @@ var heartbeat = make(chan *websocket.Conn)
 var ack = make(chan *websocket.Conn)
 var errResp = make(chan *websocket.Conn)
 
-func HandleWsMonitor(c *websocket.Conn, positions chan [][]byte) {
+func HandleWsMonitor(c *websocket.Conn) {
 	// It seems the we only need one SocketListener goroutine for the whole server.
 	// If this is the case, the next line should be moved outside of this func.
 
@@ -37,14 +37,6 @@ func HandleWsMonitor(c *websocket.Conn, positions chan [][]byte) {
 		delete(handler.WsClients, id)
 		c.Close()
 	}(incomingId)
-	go func() {
-		for {
-			select {
-			case <-positions:
-				log.Println("positions recieved")
-			}
-		}
-	}()
 	go heartbeatMonitor(c, unregister)
 	go sendMessages(c, unregister)
 	for {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/nitishm/go-rejson/v4"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -102,6 +103,11 @@ func (c *RedisClientWithContext) overrideSet(setKey string, members []string) er
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (c *RedisClientWithContext) overrideJSON(dataKey string, rh *rejson.Handler) error {
+	tx := 
 	return nil
 }
 

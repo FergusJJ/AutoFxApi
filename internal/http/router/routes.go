@@ -2,7 +2,6 @@ package router
 
 import (
 	handler "api/internal/http/handlers"
-	"api/internal/monitor"
 	wsHandler "api/internal/ws/handlers"
 	"log"
 	"time"
@@ -11,8 +10,7 @@ import (
 	"github.com/gofiber/websocket/v2"
 )
 
-func SetupRoutes(app *fiber.App, monitorSess *monitor.MonitorSession, signalNewPositions chan struct{}) error {
-	var positionsChan = make(chan [][]byte, 1)
+func SetupRoutes(app *fiber.App) error {
 	go func() {
 		staleCheckInterval := time.Second * 10
 		ticker := time.NewTicker(staleCheckInterval)
@@ -36,7 +34,7 @@ func SetupRoutes(app *fiber.App, monitorSess *monitor.MonitorSession, signalNewP
 	}()
 
 	handleWsMonitorWrapper := func(c *websocket.Conn) {
-		wsHandler.HandleWsMonitor(c, positionsChan)
+		wsHandler.HandleWsMonitor(c)
 
 	}
 
@@ -48,17 +46,5 @@ func SetupRoutes(app *fiber.App, monitorSess *monitor.MonitorSession, signalNewP
 		c.SendStatus(404)
 		return c.Next()
 	})
-
-	go func() {
-		for {
-			select {
-			case <-signalNewPositions:
-				log.Println("got signal, sending positions")
-				positionsChan <- monitorSess.FormattedPositions
-				log.Println("sent positions")
-				monitorSess.FormattedPositions = [][]byte{}
-			}
-		}
-	}()
 	return nil
 }

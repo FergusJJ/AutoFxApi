@@ -8,7 +8,6 @@ import (
 	"api/config"
 	"api/internal/http/middleware"
 	"api/internal/http/router"
-	"api/internal/monitor"
 	"api/internal/storage"
 	"api/pkg/shutdown"
 
@@ -67,19 +66,13 @@ func start(port string, cfg fiber.Config) (func(), error) {
 }
 
 func (server *Server) buildServer(cfg fiber.Config) (func(), error) {
-	signalNewPositions := make(chan struct{}, 1)
 	server.app = fiber.New(cfg)
 
-	monitorSess, err := monitor.Initialise()
-	if err != nil {
-		log.Panicln(err)
-	}
-
-	err = middleware.UseMiddlewares(server.app)
+	err := middleware.UseMiddlewares(server.app)
 	if err != nil {
 		return nil, err
 	}
-	err = router.SetupRoutes(server.app, monitorSess, signalNewPositions)
+	err = router.SetupRoutes(server.app)
 	if err != nil {
 		return nil, err
 	}
@@ -88,8 +81,6 @@ func (server *Server) buildServer(cfg fiber.Config) (func(), error) {
 		return cleanup, err
 	}
 	server.RedisClient = client
-
-	monitor.Start(monitorSess, server.RedisClient, signalNewPositions)
 
 	return cleanup, nil
 }
