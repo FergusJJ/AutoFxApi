@@ -22,3 +22,10 @@ type validLicenseKeyResponse struct {
 	ResponseCode int    `json:"responseCode"`
 	Cid          string `json:"cid"`
 }
+
+type Pool struct {
+	Register   chan *Client
+	Unregister chan *Client
+	Clients    map[string]*Client
+	Broadcaset chan string
+}

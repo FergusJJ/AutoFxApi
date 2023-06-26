@@ -17,11 +17,6 @@ on connection sendHeartbeat function starts
 
 */
 
-type sockMessage struct {
-	Action  string `json:"action"`
-	Message string `json:"message"`
-}
-
 type API_KEY string
 
 const (

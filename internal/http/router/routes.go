@@ -11,10 +11,15 @@ import (
 	"github.com/gofiber/websocket/v2"
 )
 
+var positions = make(chan string)
+
 func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) error {
 	go func() {
 		staleCheckInterval := time.Second * 10
 		ticker := time.NewTicker(staleCheckInterval)
+		checkPositionUpdateInterval := time.Millisecond * 500
+		checkPosition := time.NewTicker(checkPositionUpdateInterval)
+
 		for {
 			select {
 			case <-ticker.C:
@@ -30,15 +35,24 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 					delete(handler.WsClients, id)
 					log.Println("removed id:", id)
 				}
+			case <-checkPosition.C:
+				positionUpdate, err := redisClient.PopPositionUpdate()
+				if err != nil {
+					log.Fatal(err)
+				}
+				if positionUpdate != "" {
+					if len(handler.WsClients) > 0 {
+						positions <- positionUpdate
+					}
+					continue
+				}
+
 			}
 		}
 	}()
 
 	handleWsMonitorWrapper := func(c *websocket.Conn) {
-		// go func () {
-
-		// }()
-		wsHandler.HandleWsMonitor(c, redisClient)
+		wsHandler.HandleWsMonitor(c, positions)
 
 	}
 

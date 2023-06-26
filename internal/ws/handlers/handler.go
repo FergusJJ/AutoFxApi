@@ -2,14 +2,12 @@ package handlers
 
 import (
 	handler "api/internal/http/handlers"
-	"api/internal/storage"
 	"log"
 	"time"
 
 	"github.com/gofiber/websocket/v2"
 )
 
-var checkPositionUpdateInterval = time.Second * 1
 var register = make(chan *websocket.Conn)
 
 var unregister = make(chan *websocket.Conn)
@@ -17,7 +15,7 @@ var heartbeat = make(chan *websocket.Conn)
 var ack = make(chan *websocket.Conn)
 var errResp = make(chan *websocket.Conn)
 
-func HandleWsMonitor(c *websocket.Conn, redisClient *storage.RedisClientWithContext) {
+func HandleWsMonitor(c *websocket.Conn, positions chan string) {
 	// It seems the we only need one SocketListener goroutine for the whole server.
 	// If this is the case, the next line should be moved outside of this func.
 
@@ -36,7 +34,7 @@ func HandleWsMonitor(c *websocket.Conn, redisClient *storage.RedisClientWithCont
 		delete(handler.WsClients, id)
 		c.Close()
 	}(incomingId)
-	go sendMessages(c, unregister, redisClient)
+	go sendMessages(c, unregister, positions)
 	for {
 		messageType, message, err := c.ReadMessage()
 		if err != nil {
@@ -54,26 +52,14 @@ func HandleWsMonitor(c *websocket.Conn, redisClient *storage.RedisClientWithCont
 	}
 }
 
-func sendMessages(c *websocket.Conn, unregister chan *websocket.Conn, redisClient *storage.RedisClientWithContext) {
-	var positions = make(chan string)
+func sendMessages(c *websocket.Conn, unregister chan *websocket.Conn, positions chan string) {
 
 	go func() {
-		positionTicker := time.NewTicker(checkPositionUpdateInterval)
 		heartbeatInterval := time.Second * 30
 		heartbeatWait := time.Second * 10
 		heartbeatTicker := time.NewTicker(heartbeatInterval)
 		for {
 			select {
-			case <-positionTicker.C:
-				positionUpdate, err := redisClient.PopPositionUpdate()
-				if err != nil {
-					log.Fatal(err)
-				}
-				if positionUpdate != "" {
-					positions <- positionUpdate
-					continue
-				}
-				log.Println("no new positions")
 			case <-heartbeatTicker.C:
 				err := c.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(heartbeatWait))
 				if err != nil {
@@ -83,11 +69,9 @@ func sendMessages(c *websocket.Conn, unregister chan *websocket.Conn, redisClien
 			case <-unregister:
 				log.Println("unregistering heartbeat, conn closed")
 				heartbeatTicker.Stop()
-				positionTicker.Stop()
 				return
 			}
 		}
-
 	}()
 	for {
 		select {
