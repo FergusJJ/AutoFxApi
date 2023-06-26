@@ -3,6 +3,7 @@ package monitor
 import (
 	"api/internal/storage"
 	"api/pkg/ctrader"
+	"encoding/json"
 	"log"
 	"time"
 
@@ -199,7 +200,16 @@ func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClien
 	//signal that positions have been appended
 	if len(positionChanges) > 0 {
 		//send new positions to redis
-		log.Println("sending off to redis")
+		log.Printf("sending %d position changes", len(positionChanges))
+		for _, pos := range positionChanges {
+			jsonBytes, err := json.Marshal(pos)
+			if err != nil {
+				log.Fatal(err)
+			}
+			redisClient.PushPositionUpdate(jsonBytes)
+		}
+	} else {
+		log.Print("no position changes")
 	}
 	return nil
 

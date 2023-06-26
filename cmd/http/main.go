@@ -72,16 +72,17 @@ func (server *Server) buildServer(cfg fiber.Config) (func(), error) {
 	if err != nil {
 		return nil, err
 	}
-	err = router.SetupRoutes(server.app)
-	if err != nil {
-		return nil, err
-	}
+
 	client, cleanup, err := storage.RedisInitialise()
 	if err != nil {
 		return cleanup, err
 	}
 	server.RedisClient = client
 
+	err = router.SetupRoutes(server.app, server.RedisClient)
+	if err != nil {
+		return cleanup, err
+	}
 	return cleanup, nil
 }
 

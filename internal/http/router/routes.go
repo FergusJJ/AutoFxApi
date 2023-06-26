@@ -2,6 +2,7 @@ package router
 
 import (
 	handler "api/internal/http/handlers"
+	"api/internal/storage"
 	wsHandler "api/internal/ws/handlers"
 	"log"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"github.com/gofiber/websocket/v2"
 )
 
-func SetupRoutes(app *fiber.App) error {
+func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) error {
 	go func() {
 		staleCheckInterval := time.Second * 10
 		ticker := time.NewTicker(staleCheckInterval)
@@ -34,7 +35,10 @@ func SetupRoutes(app *fiber.App) error {
 	}()
 
 	handleWsMonitorWrapper := func(c *websocket.Conn) {
-		wsHandler.HandleWsMonitor(c)
+		// go func () {
+
+		// }()
+		wsHandler.HandleWsMonitor(c, redisClient)
 
 	}
 

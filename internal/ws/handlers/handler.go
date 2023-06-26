@@ -2,23 +2,22 @@ package handlers
 
 import (
 	handler "api/internal/http/handlers"
-	"api/pkg/ctrader"
-	"encoding/json"
+	"api/internal/storage"
 	"log"
 	"time"
 
 	"github.com/gofiber/websocket/v2"
 )
 
+var checkPositionUpdateInterval = time.Second * 1
 var register = make(chan *websocket.Conn)
 
-// var positions = make(chan []byte)
 var unregister = make(chan *websocket.Conn)
 var heartbeat = make(chan *websocket.Conn)
 var ack = make(chan *websocket.Conn)
 var errResp = make(chan *websocket.Conn)
 
-func HandleWsMonitor(c *websocket.Conn) {
+func HandleWsMonitor(c *websocket.Conn, redisClient *storage.RedisClientWithContext) {
 	// It seems the we only need one SocketListener goroutine for the whole server.
 	// If this is the case, the next line should be moved outside of this func.
 
@@ -37,8 +36,7 @@ func HandleWsMonitor(c *websocket.Conn) {
 		delete(handler.WsClients, id)
 		c.Close()
 	}(incomingId)
-	go heartbeatMonitor(c, unregister)
-	go sendMessages(c, unregister)
+	go sendMessages(c, unregister, redisClient)
 	for {
 		messageType, message, err := c.ReadMessage()
 		if err != nil {
@@ -56,35 +54,46 @@ func HandleWsMonitor(c *websocket.Conn) {
 	}
 }
 
-func heartbeatMonitor(c *websocket.Conn, unregister chan *websocket.Conn) {
-	heartbeatInterval := time.Second * 30
-	heartbeatWait := time.Second * 10
-	ticker := time.NewTicker(heartbeatInterval)
-	for {
-		select {
-		case <-ticker.C:
-			err := c.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(heartbeatWait))
-			if err != nil {
+func sendMessages(c *websocket.Conn, unregister chan *websocket.Conn, redisClient *storage.RedisClientWithContext) {
+	var positions = make(chan string)
 
+	go func() {
+		positionTicker := time.NewTicker(checkPositionUpdateInterval)
+		heartbeatInterval := time.Second * 30
+		heartbeatWait := time.Second * 10
+		heartbeatTicker := time.NewTicker(heartbeatInterval)
+		for {
+			select {
+			case <-positionTicker.C:
+				positionUpdate, err := redisClient.PopPositionUpdate()
+				if err != nil {
+					log.Fatal(err)
+				}
+				if positionUpdate != "" {
+					positions <- positionUpdate
+					continue
+				}
+				log.Println("no new positions")
+			case <-heartbeatTicker.C:
+				err := c.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(heartbeatWait))
+				if err != nil {
+
+					return
+				}
+			case <-unregister:
+				log.Println("unregistering heartbeat, conn closed")
+				heartbeatTicker.Stop()
+				positionTicker.Stop()
 				return
 			}
-		case <-unregister:
-			ticker.Stop()
-			log.Println("unregistering heartbeat, conn closed")
-			return
-
 		}
-	}
-}
 
-func sendMessages(c *websocket.Conn, unregister chan *websocket.Conn) {
-	dummyEventInterval := time.Second * 10 // this would be an incoming message from the webhook
-	ticker := time.NewTicker(dummyEventInterval)
-
+	}()
 	for {
 		select {
-		case <-ticker.C:
-
+		case positionUpdate := <-positions:
+			// log.Println("got new position")
+			log.Print(positionUpdate)
 			// newMessage := ctrader.CtraderMonitorMessage{
 			// 	SymbolID: 43,
 			// 	// Message:  time.Now().String(),
@@ -94,17 +103,13 @@ func sendMessages(c *websocket.Conn, unregister chan *websocket.Conn) {
 			// 	log.Println("in ticker event dispatcher:", err)
 			// 	return
 			// }
-			message := []byte{}
-			messageJson := &ctrader.CtraderMonitorMessage{}
-			err := json.Unmarshal(message, messageJson)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.Printf("here %+v", messageJson)
-		case <-unregister:
-			ticker.Stop()
-			log.Println("unregistering heartbeat, conn closed")
-			return
+			// message := []byte{}
+			// messageJson := &ctrader.CtraderMonitorMessage{}
+			// err := json.Unmarshal(message, messageJson)
+			// if err != nil {
+			// 	log.Fatal(err)
+			// }
+			// log.Printf("here %+v", messageJson)
 		}
 	}
 }

@@ -6,15 +6,18 @@ import (
 	"log"
 
 	"github.com/nitishm/go-rejson/v4"
-	"github.com/redis/go-redis/v9"
+	goredis "github.com/redis/go-redis/v9"
 )
 
 var redisAddr string = "redis:6379"
 var databaseID int = 0
 
+var positionUpdateKey string = "positionUpdates"
+
 type RedisClientWithContext struct {
-	RDB *redis.Client
+	RDB *goredis.Client
 	Ctx context.Context
+	RH  *rejson.Handler
 }
 
 func RedisInitialise() (*RedisClientWithContext, func(), error) {
@@ -32,18 +35,23 @@ func RedisInitialise() (*RedisClientWithContext, func(), error) {
 }
 
 func RedisGetClient(address string, database int, password ...string) *RedisClientWithContext {
-	opts := &redis.Options{
+	opts := &goredis.Options{
 		Addr:     address,
 		DB:       database,
 		Password: "",
 	}
+	rdb := goredis.NewClient(opts)
 	if len(password) != 0 {
 		opts.Password = password[0]
-	}
 
+	}
+	rh := rejson.NewReJSONHandler()
+	ctx := context.Background()
+	rh.SetGoRedisClientWithContext(ctx, rdb)
 	return &RedisClientWithContext{
-		RDB: redis.NewClient(opts),
-		Ctx: context.Background(),
+		RDB: rdb,
+		Ctx: ctx,
+		RH:  rh,
 	}
 }
 
@@ -95,7 +103,7 @@ func (c *RedisClientWithContext) ComparePositions(storageSetName string, current
 }
 
 func (c *RedisClientWithContext) overrideSet(setKey string, members []string) error {
-	return nil
+	// return nil
 	tx := c.RDB.TxPipeline()
 	tx.Del(c.Ctx, setKey)
 	tx.SAdd(c.Ctx, setKey, members)
@@ -106,9 +114,24 @@ func (c *RedisClientWithContext) overrideSet(setKey string, members []string) er
 	return nil
 }
 
-func (c *RedisClientWithContext) overrideJSON(dataKey string, rh *rejson.Handler) error {
-	tx := 
+func (c *RedisClientWithContext) PushPositionUpdate(data interface{}) error {
+	_, err := c.RDB.LPush(c.Ctx, positionUpdateKey, data).Result()
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func (c *RedisClientWithContext) PopPositionUpdate() (string, error) {
+	res, err := c.RDB.LPop(c.Ctx, positionUpdateKey).Result()
+	if err != nil {
+		if err.Error() == "redis: nil" {
+			return "", nil
+		}
+		return "", err
+	}
+
+	return res, nil
 }
 
 // func SetKey

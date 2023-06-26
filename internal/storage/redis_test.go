@@ -2,6 +2,8 @@ package storage_test
 
 import (
 	"api/internal/storage"
+	"encoding/json"
+	"log"
 	"testing"
 )
 
@@ -37,6 +39,7 @@ func Test_compare_positions(t *testing.T) {
 		t.Fail()
 	}
 	closedPositions, newPositions, err = client.ComparePositions("testStoragePositions", []string{"4"})
+	log.Println(closedPositions)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,4 +53,49 @@ func Test_compare_positions(t *testing.T) {
 		t.Fail()
 	}
 
+}
+
+func Test_set_json(t *testing.T) {
+
+	type Object struct {
+		Name     string `json:"name"`
+		Age      int    `json:"age"`
+		Verified bool   `json:"verified"`
+	}
+
+	client := storage.RedisGetClient(address, databaseID)
+	// data1 := Object{
+	// 	Name:     "fergus1",
+	// 	Age:      19,
+	// 	Verified: true,
+	// }
+	data1 := Object{
+		Name:     "fergus1as",
+		Age:      192,
+		Verified: false,
+	}
+
+	jsonBytes, err := json.Marshal(data1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// jsonBytes2, err := json.Marshal(data2)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+
+	// err = client.PushToList("positionUpdates", jsonBytes)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+
+	err = client.PushPositionUpdate(jsonBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// res, err := client.PopPositionUpdate()
+	// if err != nil && err.Error() != "redis: nil" {
+	// 	t.Fatal(err)
+	// }
+	// log.Printf("Result:\n---\n%s\n---\n", res)
 }

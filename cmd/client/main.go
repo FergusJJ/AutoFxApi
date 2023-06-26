@@ -38,12 +38,12 @@ func mainThread() {
 }
 
 func (client *Client) pollServer() {
-	addr := flag.String("addr", "localhost:8080", "http service address")
+	addr := flag.String("addr", "host.docker.internal:3000", "http service address")
 	u := url.URL{
 		Scheme:   "ws",
 		Host:     *addr,
 		Path:     "/ws/monitor",
-		RawQuery: "id=12",
+		RawQuery: "",
 	}
 
 	log.Printf("connecting to %s\n", u.String())
