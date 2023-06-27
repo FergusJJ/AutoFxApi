@@ -25,24 +25,26 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 			case <-ticker.C:
 				log.Println("checking stale ids")
 				staleIds := []string{}
-				for k, v := range handler.WsClients {
+				for k, v := range handler.WsPool.WsClients {
 					//if 10 seconds have passed and an Id does not have an associated connection, assume something went wrong.
 					if v.Ts < int(time.Now().UnixMilli())-10000 && v.WsConn == nil {
 						staleIds = append(staleIds, k)
 					}
 				}
 				for _, id := range staleIds {
-					delete(handler.WsClients, id)
+					delete(handler.WsPool.WsClients, id)
 					log.Println("removed id:", id)
 				}
+				log.Println("currentIds len: ", len(handler.WsPool.WsClients))
 			case <-checkPosition.C:
 				positionUpdate, err := redisClient.PopPositionUpdate()
 				if err != nil {
 					log.Fatal(err)
 				}
 				if positionUpdate != "" {
-					if len(handler.WsClients) > 0 {
-						positions <- positionUpdate
+					if len(handler.WsPool.WsClients) > 0 {
+						// positions <- positionUpdate //need to push update to pool
+						handler.WsPool.Broadcast <- positionUpdate
 					}
 					continue
 				}
@@ -50,9 +52,10 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 			}
 		}
 	}()
+	go handler.WsPool.Start()
 
 	handleWsMonitorWrapper := func(c *websocket.Conn) {
-		wsHandler.HandleWsMonitor(c, positions)
+		wsHandler.HandleWsMonitor(c)
 
 	}
 

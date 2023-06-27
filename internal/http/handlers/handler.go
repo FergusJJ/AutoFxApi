@@ -78,7 +78,7 @@ func HandleWhopValidate(c *fiber.Ctx) error {
 
 	//
 
-	_, licenseActive := WsClients[id]
+	_, licenseActive := WsPool.WsClients[id]
 	if licenseActive {
 		payload := &invalidRequestResponse{}
 		payload.ResponseCode = 403
@@ -86,9 +86,10 @@ func HandleWhopValidate(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusCreated).JSON(payload)
 	}
 	//
-	WsClients[id] = &Client{
+	WsPool.WsClients[id] = &Client{
 		Ts:     int(time.Now().UnixMilli()),
 		WsConn: nil,
+		Id:     id,
 	}
 	payload := validLicenseKeyResponse{
 		ResponseCode: 201,

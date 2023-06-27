@@ -208,8 +208,6 @@ func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClien
 			}
 			redisClient.PushPositionUpdate(jsonBytes)
 		}
-	} else {
-		log.Print("no position changes")
 	}
 	return nil
 
