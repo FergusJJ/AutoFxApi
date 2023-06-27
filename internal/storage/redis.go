@@ -1,7 +1,9 @@
 package storage
 
 import (
+	"api/pkg/ctrader"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -122,16 +124,20 @@ func (c *RedisClientWithContext) PushPositionUpdate(data interface{}) error {
 	return nil
 }
 
-func (c *RedisClientWithContext) PopPositionUpdate() (string, error) {
+func (c *RedisClientWithContext) PopPositionUpdate() (*ctrader.CtraderMonitorMessage, error) {
 	res, err := c.RDB.LPop(c.Ctx, positionUpdateKey).Result()
 	if err != nil {
 		if err.Error() == "redis: nil" {
-			return "", nil
+			return nil, nil
 		}
-		return "", err
+		return nil, err
 	}
-
-	return res, nil
+	message := &ctrader.CtraderMonitorMessage{}
+	err = json.Unmarshal([]byte(res), message)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return message, nil
 }
 
 // func SetKey

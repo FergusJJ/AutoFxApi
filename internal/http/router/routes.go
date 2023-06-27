@@ -41,7 +41,7 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 				if err != nil {
 					log.Fatal(err)
 				}
-				if positionUpdate != "" {
+				if positionUpdate != nil {
 					if len(handler.WsPool.WsClients) > 0 {
 						// positions <- positionUpdate //need to push update to pool
 						handler.WsPool.Broadcast <- positionUpdate
