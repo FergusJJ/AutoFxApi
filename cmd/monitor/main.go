@@ -4,6 +4,7 @@ import (
 	"api/internal/monitor"
 	"api/internal/storage"
 	"api/pkg/shutdown"
+	"log"
 	"os"
 )
 
@@ -16,6 +17,7 @@ func main() {
 	cleanup, err := start()
 	defer cleanup()
 	if err != nil {
+		log.Println(err)
 		exitCode = 1
 		return
 	}
