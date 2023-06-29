@@ -5,11 +5,23 @@ import (
 	"api/pkg/ctrader"
 	"encoding/json"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/fasthttp/websocket"
 	"github.com/google/uuid"
 )
+
+/*
+Docker output:
+
+
+2023-06-28 18:16:25 2023/06/28 17:16:25 sending 2 position changes
+2023-06-28 21:28:42 2023/06/28 20:28:42 websocket: close 1006 (abnormal closure): unexpected EOF
+2023-06-28 21:28:42 2023/06/28 20:28:42 Redis connection closed successfully
+2023-06-28 21:28:43 exit status 1
+
+*/
 
 func Initialise() (*MonitorSession, error) {
 	var session = &MonitorSession{}
@@ -24,8 +36,15 @@ func Initialise() (*MonitorSession, error) {
 }
 
 func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext) (err error) {
+	unexpectedError := false
 	go session.writePump()
-	err = session.monitor(redisClient)
+	for !unexpectedError {
+		err = session.monitor(redisClient)
+		if !strings.Contains(err.Error(), "unexpected EOF") {
+			unexpectedError = true
+		}
+	}
+
 	return err
 }
 
