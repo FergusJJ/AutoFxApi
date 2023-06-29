@@ -21,6 +21,11 @@ Docker output:
 2023-06-28 21:28:42 2023/06/28 20:28:42 Redis connection closed successfully
 2023-06-28 21:28:43 exit status 1
 
+2023-06-29 14:34:52 2023/06/29 13:34:52 write error: write tcp 172.18.0.4:41152->85.234.140.193:443: write: broken pipe
+2023-06-29 14:34:52 2023/06/29 13:34:52 write tcp 172.18.0.4:41152->85.234.140.193:443: write: broken pipe
+2023-06-29 14:34:52 2023/06/29 13:34:52 Redis connection closed successfully
+2023-06-29 14:34:52 exit status 1
+
 */
 
 func Initialise() (*MonitorSession, error) {
