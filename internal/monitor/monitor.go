@@ -4,8 +4,10 @@ import (
 	"api/internal/storage"
 	"api/pkg/ctrader"
 	"encoding/json"
+	"errors"
 	"log"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/fasthttp/websocket"
@@ -48,6 +50,7 @@ func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext)
 		if !strings.Contains(err.Error(), "unexpected EOF") {
 			unexpectedError = true
 		}
+
 	}
 
 	return err
@@ -64,6 +67,9 @@ func (session *MonitorSession) monitor(redisClient *storage.RedisClientWithConte
 	wsBody := Encode[SharingCodePayload](message, false)
 	err = session.Client.Conn.WriteMessage(websocket.BinaryMessage, wsBody)
 	if err != nil {
+		if errors.Is(err, syscall.EPIPE) {
+			log.Print("This is broken pipe error")
+		}
 		log.Println("write error:", err)
 		return err
 	}
@@ -218,6 +224,7 @@ func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClien
 			Direction:   direction,
 			MessageType: "OPEN",
 		}
+		log.Printf("%+v", positionMapping[pid].Symbol)
 		positionChanges = append(positionChanges, currentMessageStruct)
 
 	}
