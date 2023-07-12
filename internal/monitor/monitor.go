@@ -42,11 +42,11 @@ func Initialise() (*MonitorSession, error) {
 	return session, nil
 }
 
-func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext) (err error) {
+func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext, Pool string) (err error) {
 	unexpectedError := false
 	go session.writePump()
 	for !unexpectedError {
-		err = session.monitor(redisClient)
+		err = session.monitor(redisClient, Pool)
 		if !strings.Contains(err.Error(), "unexpected EOF") {
 			unexpectedError = true
 		}
@@ -56,7 +56,7 @@ func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext)
 	return err
 }
 
-func (session *MonitorSession) monitor(redisClient *storage.RedisClientWithContext) (err error) {
+func (session *MonitorSession) monitor(redisClient *storage.RedisClientWithContext, Pool string) (err error) {
 	msgUUID := uuid.NewString()
 	sharingCodePayloadVal := SharingCodePayload{SharingCode: "7venWwvj"}
 	message := WsMessage[SharingCodePayload]{
@@ -88,7 +88,7 @@ func (session *MonitorSession) monitor(redisClient *storage.RedisClientWithConte
 		if len(positions) == 0 {
 			continue
 		}
-		err = session.forwardPosititons(redisClient, positions)
+		err = session.forwardPosititons(redisClient, positions, Pool)
 		if err != nil {
 			log.Println(err)
 			return err
@@ -175,7 +175,7 @@ func (session *MonitorSession) processMessage() []OpenPosition {
 
 }
 
-func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClientWithContext, positions []OpenPosition) error {
+func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClientWithContext, positions []OpenPosition, Pool string) error {
 	var positionChanges = []ctrader.CtraderMonitorMessage{}
 	var positionsName = "testStoragePositions"
 	if len(positions) == 0 {
@@ -199,6 +199,7 @@ func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClien
 			direction = "BUY"
 		}
 		currentMessageStruct := ctrader.CtraderMonitorMessage{
+			Pool:        Pool,
 			CopyPID:     pid,
 			SymbolID:    positionMapping[pid].Symbol.SymbolID,
 			Price:       positionMapping[pid].CurrentPrice, //send current price if position is closed

@@ -9,12 +9,13 @@ import (
 )
 
 func main() {
+	var Pool = "7venWwvj"
 	var exitCode int
 	defer func() {
 		os.Exit(exitCode)
 	}()
 
-	cleanup, err := start()
+	cleanup, err := start(Pool)
 	defer cleanup()
 	if err != nil {
 		log.Println(err)
@@ -24,7 +25,7 @@ func main() {
 	shutdown.Gracefully()
 }
 
-func start() (func(), error) {
+func start(Pool string) (func(), error) {
 
 	client, cleanup, err := storage.RedisInitialise()
 	if err != nil {
@@ -34,7 +35,7 @@ func start() (func(), error) {
 	if err != nil {
 		return cleanup, err
 	}
-	err = monitor.Start(monitorSess, client)
+	err = monitor.Start(monitorSess, client, Pool)
 	if err != nil {
 		return cleanup, err
 	}

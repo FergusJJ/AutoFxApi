@@ -7,41 +7,28 @@ import (
 	"github.com/gofiber/websocket/v2"
 )
 
-type Client struct {
-	Ts          int
-	WsConn      *websocket.Conn
-	Pool        *Pool
-	Id          string
-	Overwritten bool
+var WsPools = map[string]*Pool{
+	"7venWwvj": {
+		Id:         "7venWwvj",
+		Unregister: make(chan *Client),
+		WsClients:  make(map[string]*Client),
+		Broadcast:  make(chan *ctrader.CtraderMonitorMessage),
+	},
+	"pool1": {
+		Id:         "pool1",
+		Unregister: make(chan *Client),
+		WsClients:  make(map[string]*Client),
+		Broadcast:  make(chan *ctrader.CtraderMonitorMessage),
+	},
 }
 
-// func (c *Client) Read() {
-// 	defer func() {
-// 		c.Pool.Unregister <- c
-// 		c.WsConn.Close()
-// 	}()
-// 	for {
-// 		messageType, p, err := c.WsConn.ReadMessage()
-// 		if err != nil {
-// 			log.Println(err)
-// 			return
-// 		}
-// 		c.Pool.Broadcast <- p
-// 		log.Println("message of type", messageType)
-// 	}
-// }
+var ActiveClients = map[string]*Client{}
 
-type NewClient struct {
+type Client struct {
 	Ts     int
 	WsConn *websocket.Conn
+	Pool   []*Pool
 	Id     string
-	Pool   *Pool
-}
-
-var WsPool = &Pool{
-	Unregister: make(chan *Client),
-	WsClients:  make(map[string]*Client),
-	Broadcast:  make(chan *ctrader.CtraderMonitorMessage),
 }
 
 type invalidRequestResponse struct {
@@ -55,15 +42,18 @@ type validLicenseKeyResponse struct {
 }
 
 type Pool struct {
+	Id         string
 	Unregister chan *Client
 	WsClients  map[string]*Client                  //WsClients
 	Broadcast  chan *ctrader.CtraderMonitorMessage //message to send to all clients
 }
 
+// pool.unreg is not being hit
 func (pool *Pool) Start() {
 	for {
 		select {
 		case client := <-pool.Unregister:
+			log.Println("here")
 			delete(pool.WsClients, client.Id)
 			client.WsConn.Close()
 
