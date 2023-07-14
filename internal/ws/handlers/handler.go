@@ -2,6 +2,7 @@ package handlers
 
 import (
 	handler "api/internal/http/handlers"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ func HandleWsMonitor(c *websocket.Conn) {
 
 	monitorPools := c.Headers("Pools") //should send a "," seperated list of the pools that the client wants to subscribe to, if none are sent then return
 	if monitorPools == "" {
+		//close conn, send message
 		log.Printf("id %s has not specified any pools", incomingId)
 		return
 	}
@@ -36,38 +38,37 @@ func HandleWsMonitor(c *websocket.Conn) {
 	//check that all pools exist before connecting
 	poolsSlice := strings.Split(monitorPools, ",")
 	for _, pool := range poolsSlice {
-		_, ok := handler.WsPools[pool]
+		pool = strings.TrimSpace(pool)
+		_, ok := handler.WsPools[pool] //if pool doesn't exist, create pool
 		if !ok {
-			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "cannot connect to a copy session that does not exist")
-			if err := c.WriteMessage(websocket.CloseMessage, cm); err != nil {
-				log.Println(err)
-			}
+			newPool := handler.NewPool(pool) //pool created and added to WsPools
+			go newPool.Start()
 		}
-		//
-		// log.Println(handler.WsPools[pool].WsClients[incomingId])
-
 		if handler.WsPools[pool].WsClients[incomingId] != nil {
-			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "connection already registered with same ID, close previous connection before attempting to connect to new copy sessions")
+			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, fmt.Sprintf("connection to pool: %s already registered, close previous connection before attempting to reconnect", pool))
 			if err := c.WriteMessage(websocket.CloseMessage, cm); err != nil {
 				log.Println(err)
+				return
 			}
 		}
 	}
+	//could maybe have something where it will only reject pools that are already initialised
+	//but will just make sure that all pools are closed first
 	handler.ActiveClients[incomingId].WsConn = c
-
 	for _, pool := range poolsSlice {
+		pool = strings.TrimSpace(pool)
 		handler.WsPools[pool].WsClients[incomingId] = handler.ActiveClients[incomingId]
+		handler.ActiveClients[incomingId].Pool = append(handler.ActiveClients[incomingId].Pool, handler.WsPools[pool])
 	}
 
 	defer func(id string) {
 		unregister <- c //to stop ticker
 		for _, pool := range handler.ActiveClients[id].Pool {
-			pool.Unregister <- handler.ActiveClients[id]
+			handler.WsPools[pool.Id].Unregister <- handler.ActiveClients[id]
 		}
-		log.Printf("Pool1 clients: %v", handler.WsPools["pool1"].WsClients)
-		log.Printf("7venWwvj clients: %v", handler.WsPools["7venWwvj"].WsClients)
+		handler.ActiveClients[id].WsConn.Conn.Close()
 		delete(handler.ActiveClients, id)
-		log.Printf("Active clients: %v", handler.ActiveClients)
+
 	}(incomingId)
 
 	go sendMessages(c, unregister)
@@ -102,9 +103,7 @@ func sendMessages(c *websocket.Conn, unregister chan *websocket.Conn) {
 				return
 			}
 		case <-unregister:
-			log.Println("unregistering heartbeat, conn closed")
 			heartbeatTicker.Stop()
-
 			return
 		}
 	}

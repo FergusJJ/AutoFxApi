@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+	//pool needs to be an option
 	var Pool = "7venWwvj"
 	var exitCode int
 	defer func() {

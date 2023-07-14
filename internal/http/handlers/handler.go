@@ -101,3 +101,10 @@ func HandleWhopValidate(c *fiber.Ctx) error {
 	// cid := uuid.New().String()
 
 }
+
+func HandleNewMonitor(c *fiber.Ctx) error {
+	return nil
+}
+func HandleCloseMonitor(c *fiber.Ctx) error {
+	return nil
+}

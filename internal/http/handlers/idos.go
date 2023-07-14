@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/websocket/v2"
 )
 
-var WsPools = map[string]*Pool{
+/*
 	"7venWwvj": {
 		Id:         "7venWwvj",
 		Unregister: make(chan *Client),
@@ -20,8 +20,9 @@ var WsPools = map[string]*Pool{
 		WsClients:  make(map[string]*Client),
 		Broadcast:  make(chan *ctrader.CtraderMonitorMessage),
 	},
-}
+*/
 
+var WsPools = map[string]*Pool{}
 var ActiveClients = map[string]*Client{}
 
 type Client struct {
@@ -48,14 +49,33 @@ type Pool struct {
 	Broadcast  chan *ctrader.CtraderMonitorMessage //message to send to all clients
 }
 
+func NewPool(name string) *Pool {
+	newPool := &Pool{
+		Id:         name,
+		Unregister: make(chan *Client),
+		WsClients:  make(map[string]*Client),
+		Broadcast:  make(chan *ctrader.CtraderMonitorMessage),
+	}
+	WsPools[name] = newPool
+	return newPool
+}
+
 // pool.unreg is not being hit
 func (pool *Pool) Start() {
+	defer func() {
+		log.Println("deleting pool", pool.Id)
+		delete(WsPools, pool.Id)
+	}()
 	for {
 		select {
 		case client := <-pool.Unregister:
-			log.Println("here")
+			//remove client from pool
+			log.Printf("len %s = %d", pool.Id, len(pool.WsClients))
 			delete(pool.WsClients, client.Id)
-			client.WsConn.Close()
+
+			if len(pool.WsClients) == 0 {
+				return
+			}
 
 		case message := <-pool.Broadcast:
 			for _, client := range pool.WsClients {

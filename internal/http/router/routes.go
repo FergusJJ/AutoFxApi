@@ -48,20 +48,25 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 					log.Fatal(err)
 				}
 				if positionUpdate != nil {
+					_, ok := handler.WsPools[positionUpdate.Pool]
+					if !ok {
+						break
+					}
 					if len(handler.WsPools[positionUpdate.Pool].WsClients) > 0 {
 						handler.WsPools[positionUpdate.Pool].Broadcast <- positionUpdate
 
 					}
-					continue
+
 				}
 
 			}
 		}
 	}()
-	for _, pool := range handler.WsPools {
-		go pool.Start()
-	}
+	// for _, pool := range handler.WsPools {
+	// 	go pool.Start()
+	// }
 
+	internal := app.Group("/internal")
 	handleWsMonitorWrapper := func(c *websocket.Conn) {
 		wsHandler.HandleWsMonitor(c)
 
@@ -70,6 +75,11 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 	app.Get("/whop/validate", handler.HandleWhopValidate)
 
 	app.Get("/ws/monitor", websocket.New(handleWsMonitorWrapper))
+
+	monitor := internal.Group("/monitor")
+
+	monitor.Post("/new-monitor", handler.HandleNewMonitor)
+	monitor.Post("/close-monitor", handler.HandleCloseMonitor)
 
 	app.Use(func(c *fiber.Ctx) error {
 		c.SendStatus(404)
