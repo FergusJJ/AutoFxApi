@@ -15,6 +15,7 @@ var redisAddr string = "redis:6379"
 var databaseID int = 0
 
 var positionUpdateKey string = "positionUpdates"
+var MonitorUpdateKey string = "monitorUpdates"
 
 type RedisClientWithContext struct {
 	RDB *goredis.Client
@@ -142,7 +143,11 @@ func (c *RedisClientWithContext) PopPositionUpdate() (*ctrader.CtraderMonitorMes
 
 // func SetKey
 func (c *RedisClientWithContext) PushUpdate(updateKey string, data interface{}) error {
-	_, err := c.RDB.LPush(c.Ctx, updateKey, data).Result()
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	_, err = c.RDB.LPush(c.Ctx, updateKey, dataBytes).Result()
 	if err != nil {
 		return err
 	}
@@ -150,6 +155,7 @@ func (c *RedisClientWithContext) PushUpdate(updateKey string, data interface{}) 
 }
 
 func (c *RedisClientWithContext) PopUpdate(updateKey string) ([]byte, error) {
+
 	res, err := c.RDB.LPop(c.Ctx, updateKey).Result()
 	if err != nil {
 		if err.Error() == "redis: nil" {
@@ -157,6 +163,5 @@ func (c *RedisClientWithContext) PopUpdate(updateKey string) ([]byte, error) {
 		}
 		return nil, err
 	}
-
 	return []byte(res), err
 }

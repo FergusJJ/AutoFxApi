@@ -1,6 +1,7 @@
 package handler
 
 import (
+	monitormanager "api/internal/monitor-manager"
 	"api/pkg/ctrader"
 	"log"
 
@@ -40,6 +41,11 @@ type invalidRequestResponse struct {
 type validLicenseKeyResponse struct {
 	ResponseCode int    `json:"responseCode"`
 	Cid          string `json:"cid"`
+}
+
+type monitorUpdateResponse struct {
+	MonitorManagerMessage *monitormanager.MonitorManagerMessage `json:"monitorManagerMessage"`
+	IsUpdate              bool                                  `json:"isUpdate"`
 }
 
 type Pool struct {

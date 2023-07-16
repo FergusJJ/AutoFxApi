@@ -69,7 +69,20 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 	internal := app.Group("/internal")
 	handleWsMonitorWrapper := func(c *websocket.Conn) {
 		wsHandler.HandleWsMonitor(c)
-
+	}
+	handleNewMonitorWrapper := func(c *fiber.Ctx) error {
+		err := handler.HandleNewMonitor(c, redisClient)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	handleCloseMonitorWrapper := func(c *fiber.Ctx) error {
+		err := handler.HandleCloseMonitor(c, redisClient)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	app.Get("/whop/validate", handler.HandleWhopValidate)
@@ -78,8 +91,8 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 
 	monitor := internal.Group("/monitor")
 
-	monitor.Post("/new-monitor", handler.HandleNewMonitor)
-	monitor.Post("/close-monitor", handler.HandleCloseMonitor)
+	monitor.Post("/new-monitor", handleNewMonitorWrapper)
+	monitor.Post("/close-monitor", handleCloseMonitorWrapper)
 
 	app.Use(func(c *fiber.Ctx) error {
 		c.SendStatus(404)

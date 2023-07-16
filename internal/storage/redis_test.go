@@ -2,8 +2,10 @@ package storage_test
 
 import (
 	"api/internal/storage"
+	"encoding/base64"
 	"encoding/json"
 	"log"
+	"strings"
 	"testing"
 )
 
@@ -98,4 +100,54 @@ func Test_set_json(t *testing.T) {
 	// 	t.Fatal(err)
 	// }
 	// log.Printf("Result:\n---\n%s\n---\n", res)
+}
+
+func Test_Push_Pop_Position_Update(t *testing.T) {
+
+	type MonitorTypes string
+	type Object struct {
+		Name   string       `json:"name"`
+		Type   MonitorTypes `json:"type"`
+		Option int          `json:"option"`
+	}
+
+	var (
+		ICMARKETS MonitorTypes = "icmarkets"
+	)
+
+	client := storage.RedisGetClient(address, databaseID)
+
+	data1 := &Object{
+		Name:   "test_test",
+		Type:   ICMARKETS,
+		Option: 1,
+	}
+
+	jsonBytes, err := json.Marshal(data1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = client.PushUpdate(storage.MonitorUpdateKey, jsonBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resBytes, err := client.PopUpdate(storage.MonitorUpdateKey)
+	if err != nil && err.Error() != "redis: nil" {
+		t.Fatal(err)
+	}
+	resStr := string(resBytes)
+	resStr = strings.Trim(resStr, `"`)
+	decoded, err := base64.RawStdEncoding.DecodeString(resStr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Printf("Result:\n---\n%s\n---\n", string(decoded))
+
+	res := &Object{}
+	err = json.Unmarshal(decoded, res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Printf("Result:\n---\n%+v\n---\n", res)
 }
