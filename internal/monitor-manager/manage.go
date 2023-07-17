@@ -64,7 +64,6 @@ func (m *Manager) Manage(client *storage.RedisClientWithContext) error {
 				return err
 			}
 			if len(updateBytes) == 0 {
-				log.Print("no updates")
 				continue
 			}
 			message := &MonitorManagerMessage{}

@@ -23,7 +23,6 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 		for {
 			select {
 			case <-ticker.C:
-				log.Println("checking stale ids")
 				staleIds := []string{}
 				for k, v := range handler.ActiveClients {
 					//if 10 seconds have passed and an Id does not have an associated connection, assume something went wrong.
