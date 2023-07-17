@@ -80,6 +80,11 @@ type ProtoJMTraderPositionListReq struct {
 	TraderLogin int    `json:"traderLogin"`
 }
 
+type ProtoErrorRes struct {
+	Description string `json:"description"`
+	ErrorCode   string `json:"errorCode"`
+}
+
 func (p ProtoJMTraderPositionListReq) Get(key string) interface{} {
 	switch key {
 	case "cursor":
@@ -143,6 +148,14 @@ func SliceFromMessageType(MessageType int) map[int][]string {
 			1: {"int:1", "string:payloadType", "string:uint32", "int:1"},
 			2: {"int:2", "string:payload", "string:bytes", "int:0"},
 			3: {"int:3", "string:clientMsgId", "string:string", "int:0"},
+		}
+	case 50:
+		return map[int][]string{
+			1: {"int:1", "string:payloadType", "string:uint32", "int:1"},
+			2: {"int:2", "string:errorCode", "string:string", "int:1"},
+			3: {"int:3", "string:description", "string:string", "int:0"},
+			4: {"int:4", "string:maintenanceEndTimestamp", "string:uint64", "int:0"},
+			5: {"int:5", "string:retryAfter", "string:uint64", "int:0"},
 		}
 
 	case 4258:
@@ -246,6 +259,7 @@ type messageProcessor struct {
 }
 
 type MonitorSession struct {
+	Pool        string
 	Client      *WsClient
 	TraderLogin chan (int)
 	PlantID     chan (string)

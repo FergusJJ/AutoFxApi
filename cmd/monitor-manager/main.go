@@ -8,6 +8,8 @@ import (
 	"os"
 )
 
+//need to change testStoragePositions to makle sure that positions aren't mixed between different pools
+
 //this should be ran in place of a single monitor
 //I think maybe should connect to API
 //then request should be sent to specific API route
@@ -37,7 +39,8 @@ func start() (func(), error) {
 	if err != nil {
 		return cleanup, err
 	}
-	err = monitormanager.Manage(client)
+	manager := monitormanager.NewManager()
+	err = manager.Manage(client)
 	//maybe cleanup will close individualmonitors as well
 	return cleanup, err
 }

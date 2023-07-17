@@ -2,10 +2,8 @@ package storage_test
 
 import (
 	"api/internal/storage"
-	"encoding/base64"
 	"encoding/json"
 	"log"
-	"strings"
 	"testing"
 )
 
@@ -136,18 +134,10 @@ func Test_Push_Pop_Position_Update(t *testing.T) {
 	if err != nil && err.Error() != "redis: nil" {
 		t.Fatal(err)
 	}
-	resStr := string(resBytes)
-	resStr = strings.Trim(resStr, `"`)
-	decoded, err := base64.RawStdEncoding.DecodeString(resStr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	log.Printf("Result:\n---\n%s\n---\n", string(decoded))
+	obj := &Object{}
+	json.Unmarshal(resBytes, obj)
+	// resStr := string(resBytes)
 
-	res := &Object{}
-	err = json.Unmarshal(decoded, res)
-	if err != nil {
-		t.Fatal(err)
-	}
-	log.Printf("Result:\n---\n%+v\n---\n", res)
+	log.Printf("Result:\n---\n%+v\n---\n", obj)
+
 }

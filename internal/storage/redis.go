@@ -143,11 +143,8 @@ func (c *RedisClientWithContext) PopPositionUpdate() (*ctrader.CtraderMonitorMes
 
 // func SetKey
 func (c *RedisClientWithContext) PushUpdate(updateKey string, data interface{}) error {
-	dataBytes, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-	_, err = c.RDB.LPush(c.Ctx, updateKey, dataBytes).Result()
+
+	_, err := c.RDB.LPush(c.Ctx, updateKey, data).Result()
 	if err != nil {
 		return err
 	}

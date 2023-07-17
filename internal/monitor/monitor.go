@@ -30,7 +30,8 @@ Docker output:
 
 */
 
-func Initialise() (*MonitorSession, error) {
+func Initialise(Pool string) (*MonitorSession, error) {
+	log.Printf("initialising monitor %s\n", Pool)
 	var session = &MonitorSession{}
 	conn, err := GetConn("wss://h30.p.ctrader.com/")
 	if err != nil {
@@ -39,14 +40,15 @@ func Initialise() (*MonitorSession, error) {
 	session.Client = &WsClient{Conn: conn, CurrentMessage: []byte{}}
 	session.TraderLogin = make(chan int)
 	session.PlantID = make(chan string)
+	session.Pool = Pool
 	return session, nil
 }
 
-func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext, Pool string) (err error) {
+func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext) (err error) {
 	unexpectedError := false
 	go session.writePump()
 	for !unexpectedError {
-		err = session.monitor(redisClient, Pool)
+		err = session.monitor(redisClient)
 		if !strings.Contains(err.Error(), "unexpected EOF") {
 			unexpectedError = true
 		}
@@ -56,9 +58,9 @@ func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext,
 	return err
 }
 
-func (session *MonitorSession) monitor(redisClient *storage.RedisClientWithContext, Pool string) (err error) {
+func (session *MonitorSession) monitor(redisClient *storage.RedisClientWithContext) (err error) {
 	msgUUID := uuid.NewString()
-	sharingCodePayloadVal := SharingCodePayload{SharingCode: "7venWwvj"}
+	sharingCodePayloadVal := SharingCodePayload{SharingCode: session.Pool}
 	message := WsMessage[SharingCodePayload]{
 		ClientMsgId: msgUUID,
 		Payload:     sharingCodePayloadVal,
@@ -88,7 +90,7 @@ func (session *MonitorSession) monitor(redisClient *storage.RedisClientWithConte
 		if len(positions) == 0 {
 			continue
 		}
-		err = session.forwardPosititons(redisClient, positions, Pool)
+		err = session.forwardPosititons(redisClient, positions)
 		if err != nil {
 			log.Println(err)
 			return err
@@ -97,6 +99,7 @@ func (session *MonitorSession) monitor(redisClient *storage.RedisClientWithConte
 }
 
 func (session *MonitorSession) writePump() {
+
 	var PlantId = ""
 	var TraderLogin = -1
 	pollPositionInterval := time.Millisecond * 1000
@@ -111,7 +114,7 @@ func (session *MonitorSession) writePump() {
 			positionRequestPayload := ProtoJMTraderPositionListReq{
 				Cursor:      "",
 				Limit:       1000,
-				SharingCode: "7venWwvj",
+				SharingCode: session.Pool,
 				PlantId:     PlantId,
 				TraderLogin: TraderLogin,
 			}
@@ -127,6 +130,7 @@ func (session *MonitorSession) writePump() {
 			}
 
 		case PlantId = <-session.PlantID:
+
 		case TraderLogin = <-session.TraderLogin:
 		}
 	}
@@ -141,10 +145,21 @@ func (session *MonitorSession) processMessage() []OpenPosition {
 	initialDecode := messageBuffer.DecodeInitial()
 
 	messageBuffer.Arr = initialDecode.Payload.Bytes
-
 	switch initialDecode.PayloadType {
+	case 50:
+		messageBuffer.MessageType = SliceFromMessageType(initialDecode.PayloadType)
+		decodedMessage, err := messageBuffer.DecodeSpecific(initialDecode.PayloadType)
+		if err != nil {
+			log.Fatal(err)
+		}
+		message, ok := decodedMessage.(ProtoErrorRes)
+		if !ok {
+			log.Fatal("couldn't cast message to ProtoErrorRes")
+		}
+		if message.ErrorCode == "CH_TRADER_ACCOUNT_NOT_FOUND" {
+			log.Fatalf("monitor error: %s, for %s\n", message.Description, session.Pool)
+		}
 	case 4315:
-
 		messageBuffer.MessageType = SliceFromMessageType(initialDecode.PayloadType)
 		decodedMessage, err := messageBuffer.DecodeSpecific(initialDecode.PayloadType)
 		if err != nil {
@@ -175,7 +190,7 @@ func (session *MonitorSession) processMessage() []OpenPosition {
 
 }
 
-func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClientWithContext, positions []OpenPosition, Pool string) error {
+func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClientWithContext, positions []OpenPosition) error {
 	var positionChanges = []ctrader.CtraderMonitorMessage{}
 	var positionsName = "testStoragePositions"
 	if len(positions) == 0 {
@@ -199,7 +214,7 @@ func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClien
 			direction = "BUY"
 		}
 		currentMessageStruct := ctrader.CtraderMonitorMessage{
-			Pool:        Pool,
+			Pool:        session.Pool,
 			CopyPID:     pid,
 			SymbolID:    positionMapping[pid].Symbol.SymbolID,
 			Price:       positionMapping[pid].CurrentPrice, //send current price if position is closed

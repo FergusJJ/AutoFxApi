@@ -41,6 +41,11 @@ func (MessageBuf *MessageBuf) DecodeSpecific(payloadType int) (interface{}, erro
 		if err := mapstructure.Decode(decodedPayload, &specificStruct); err != nil {
 			return nil, err
 		}
+	case 50:
+		specificStruct = ProtoErrorRes{}
+		if err := mapstructure.Decode(decodedPayload, &specificStruct); err != nil {
+			return nil, err
+		}
 
 	default:
 		log.Fatalf("uncaught %d", payloadType)

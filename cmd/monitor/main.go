@@ -9,12 +9,17 @@ import (
 )
 
 func main() {
-	//pool needs to be an option
-	var Pool = "7venWwvj"
 	var exitCode int
 	defer func() {
 		os.Exit(exitCode)
 	}()
+	//pool needs to be an option
+	if len(os.Args) == 1 {
+		log.Println("no args provided")
+		exitCode = 1
+		return
+	}
+	var Pool = os.Args[1] // "7venWwvj"
 
 	cleanup, err := start(Pool)
 	defer cleanup()
@@ -32,11 +37,11 @@ func start(Pool string) (func(), error) {
 	if err != nil {
 		return cleanup, err
 	}
-	monitorSess, err := monitor.Initialise()
+	monitorSess, err := monitor.Initialise(Pool)
 	if err != nil {
 		return cleanup, err
 	}
-	err = monitor.Start(monitorSess, client, Pool)
+	err = monitor.Start(monitorSess, client)
 	if err != nil {
 		return cleanup, err
 	}

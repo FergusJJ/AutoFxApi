@@ -106,7 +106,7 @@ func HandleWhopValidate(c *fiber.Ctx) error {
 
 }
 
-func HandleNewMonitor(c *fiber.Ctx, redisClient *storage.RedisClientWithContext) error {
+func HandleConfigureMonitorWrapper(c *fiber.Ctx, redisClient *storage.RedisClientWithContext) error {
 
 	payload := &monitormanager.MonitorManagerMessage{}
 	if err := c.BodyParser(payload); err != nil {
@@ -133,48 +133,17 @@ func HandleNewMonitor(c *fiber.Ctx, redisClient *storage.RedisClientWithContext)
 		}
 		return c.Status(fiber.StatusBadRequest).JSON(payload)
 	}
-	err := redisClient.PushUpdate(storage.MonitorUpdateKey, payload)
+
+	payloadJsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.Print(err)
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+	err = redisClient.PushUpdate(storage.MonitorUpdateKey, payloadJsonBytes)
 	if err != nil {
 		log.Print(err)
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 	return nil
 
-}
-func HandleCloseMonitor(c *fiber.Ctx, redisClient *storage.RedisClientWithContext) error {
-	payload := &monitormanager.MonitorManagerMessage{}
-	if err := c.BodyParser(payload); err != nil {
-		return err
-	}
-	valid, errMsg := checkMonitorManagerMessagePayload(payload)
-	if !valid {
-		payload := invalidRequestResponse{
-			ResponseCode: fiber.StatusBadRequest,
-			Message:      errMsg,
-		}
-		return c.Status(fiber.StatusBadRequest).JSON(payload)
-	}
-	newUpdate, err := redisClient.PopUpdate(storage.MonitorUpdateKey)
-	if err != nil {
-		log.Print(err)
-		return c.SendStatus(503)
-	}
-	if newUpdate == nil {
-		respPayload := &monitorUpdateResponse{
-			MonitorManagerMessage: nil,
-			IsUpdate:              false,
-		}
-		return c.Status(fiber.StatusOK).JSON(respPayload)
-	}
-	monitorManagerMessage := &monitormanager.MonitorManagerMessage{}
-	err = json.Unmarshal(newUpdate, monitorManagerMessage)
-	if err != nil {
-		log.Print(err)
-		return c.SendStatus(503)
-	}
-
-	return c.Status(fiber.StatusOK).JSON(&monitorUpdateResponse{
-		IsUpdate:              true,
-		MonitorManagerMessage: monitorManagerMessage,
-	})
 }

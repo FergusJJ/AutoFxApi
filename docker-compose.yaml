@@ -3,6 +3,7 @@ version: '3.8'
 services:
   api:
     build: .
+    restart: always
     env_file:
       - .env
     ports:
@@ -11,13 +12,18 @@ services:
       - .:/usr/src/fxapi
     depends_on:
       - redis
-      - monitor
     command: go run cmd/http/main.go
-  monitor:
+  # monitor:
+  #   build: .
+  #   depends_on:
+  #     - redis
+  #   command: go run cmd/monitor/main.go
+  monitor-manager:
     build: .
+    restart: always
     depends_on:
       - redis
-    command: go run cmd/monitor/main.go
+    command: go run cmd/monitor-manager/main.go
   redis:
     image: redis:6.0.7
     container_name: redis
