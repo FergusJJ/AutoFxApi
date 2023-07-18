@@ -72,7 +72,7 @@ func (m *Manager) Manage(client *storage.RedisClientWithContext) error {
 			case OptionsMap["START"]:
 				_, ok := m.Executables[message.Name]
 				if ok {
-					log.Print("already monitoring: ", message.Name)
+					log.Println("already monitoring:", message.Name)
 					continue
 				}
 				exe := NewExecutable("/usr/src/fxapi/cmd/monitor.exe", message.Name)
@@ -94,7 +94,7 @@ func (m *Manager) Manage(client *storage.RedisClientWithContext) error {
 				}
 				if !m.Executables[message.Name].running {
 					delete(m.Executables, message.Name)
-					log.Print("successfully stopped", message.Name)
+					log.Println("successfully stopped", message.Name)
 				}
 
 			default:

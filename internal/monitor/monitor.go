@@ -5,6 +5,7 @@ import (
 	"api/pkg/ctrader"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"syscall"
@@ -90,7 +91,7 @@ func (session *MonitorSession) monitor(redisClient *storage.RedisClientWithConte
 		if len(positions) == 0 {
 			continue
 		}
-		err = session.forwardPosititons(redisClient, positions)
+		err = session.forwardPosititons(session.Pool, redisClient, positions)
 		if err != nil {
 			log.Println(err)
 			return err
@@ -190,9 +191,9 @@ func (session *MonitorSession) processMessage() []OpenPosition {
 
 }
 
-func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClientWithContext, positions []OpenPosition) error {
+func (session *MonitorSession) forwardPosititons(pool string, redisClient *storage.RedisClientWithContext, positions []OpenPosition) error {
 	var positionChanges = []ctrader.CtraderMonitorMessage{}
-	var positionsName = "testStoragePositions"
+	var positionsName = fmt.Sprintf("storage-positions-pool-%s", pool)
 	if len(positions) == 0 {
 		log.Println("pos is 0 ")
 		return nil
@@ -245,6 +246,7 @@ func (session *MonitorSession) forwardPosititons(redisClient *storage.RedisClien
 
 	}
 	//signal that positions have been appended
+	//if position changes are old, don't send, will also avoid a bunch of position changes being sent on monitor startup
 	if len(positionChanges) > 0 {
 		//send new positions to redis
 		log.Printf("sending %d position changes", len(positionChanges))
