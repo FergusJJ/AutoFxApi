@@ -17,6 +17,7 @@ import (
 type Server struct {
 	app         *fiber.App
 	RedisClient *storage.RedisClientWithContext
+	PGStore     storage.PGStorage
 }
 
 var server = &Server{}

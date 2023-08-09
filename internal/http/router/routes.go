@@ -78,8 +78,12 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 
 	app.Get("/ws/monitor", websocket.New(handleWsMonitorWrapper))
 
-	monitor := internal.Group("/monitor")
+	user := app.Group("/api/user/:id")
+	user.Get("/positions/all", handler.HandleGetAllUserPositions)
+	user.Post("/positions/push", handler.HandlePushNewUserPositions)
+	user.Post("/positions/pop", handler.HandlePopUserPositions)
 
+	monitor := internal.Group("/monitor")
 	monitor.Post("/configure-monitor", handleConfigureMonitorWrapper)
 
 	app.Use(func(c *fiber.Ctx) error {

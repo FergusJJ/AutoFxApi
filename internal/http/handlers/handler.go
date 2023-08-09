@@ -147,3 +147,34 @@ func HandleConfigureMonitorWrapper(c *fiber.Ctx, redisClient *storage.RedisClien
 	return nil
 
 }
+
+// get user by id, return list ok CopyPID:PID pairs
+func HandleGetAllUserPositions(c *fiber.Ctx) error {
+	userId := c.Params("id")
+	log.Printf("user id: %s", userId)
+
+	//probably check with something whether user is allowed in order to stop database queries that are unnecessary
+
+	//if user doesn't exist then send 404
+
+	data := map[string]string{}
+	return c.Status(fiber.StatusOK).JSON(data)
+}
+
+// take list of CopyPID:PID pairs
+func HandlePushNewUserPositions(c *fiber.Ctx) error {
+	userId := c.Params("id")
+
+	log.Printf("user id: %s", userId)
+	data := map[string]string{}
+	return c.Status(fiber.StatusCreated).JSON(data)
+}
+
+// take list of CopyPIDs
+func HandlePopUserPositions(c *fiber.Ctx) error {
+	userId := c.Params("id")
+
+	log.Printf("user id: %s", userId)
+	data := map[string]string{}
+	return c.Status(fiber.StatusAccepted).JSON(data)
+}
