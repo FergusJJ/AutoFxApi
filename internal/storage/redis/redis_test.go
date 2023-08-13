@@ -1,7 +1,7 @@
-package storage_test
+package redis_test
 
 import (
-	"api/internal/storage"
+	cache "api/internal/storage/redis"
 	"encoding/json"
 	"log"
 	"testing"
@@ -11,7 +11,7 @@ var address = "127.0.0.1:6379"
 var databaseID = 0
 
 func Test_redis_initialise(t *testing.T) {
-	client := storage.RedisGetClient(address, databaseID)
+	client := cache.RedisGetClient(address, databaseID)
 	client.RDB.Do(client.Ctx)
 	pong, err := client.RDB.Ping(client.Ctx).Result()
 	if err != nil {
@@ -24,7 +24,7 @@ func Test_redis_initialise(t *testing.T) {
 func Test_compare_positions(t *testing.T) {
 
 	//testStoragePositions = 1, 2, 3
-	client := storage.RedisGetClient(address, databaseID)
+	client := cache.RedisGetClient(address, databaseID)
 	closedPositions, newPositions, err := client.ComparePositions("testStoragePositions", []string{"1", "2"})
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func Test_set_json(t *testing.T) {
 		Verified bool   `json:"verified"`
 	}
 
-	client := storage.RedisGetClient(address, databaseID)
+	client := cache.RedisGetClient(address, databaseID)
 	// data1 := Object{
 	// 	Name:     "fergus1",
 	// 	Age:      19,
@@ -113,7 +113,7 @@ func Test_Push_Pop_Position_Update(t *testing.T) {
 		ICMARKETS MonitorTypes = "icmarkets"
 	)
 
-	client := storage.RedisGetClient(address, databaseID)
+	client := cache.RedisGetClient(address, databaseID)
 
 	data1 := &Object{
 		Name:   "test_test",
@@ -126,11 +126,11 @@ func Test_Push_Pop_Position_Update(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = client.PushUpdate(storage.MonitorUpdateKey, jsonBytes)
+	err = client.PushUpdate(cache.MonitorUpdateKey, jsonBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
-	resBytes, err := client.PopUpdate(storage.MonitorUpdateKey)
+	resBytes, err := client.PopUpdate(cache.MonitorUpdateKey)
 	if err != nil && err.Error() != "redis: nil" {
 		t.Fatal(err)
 	}

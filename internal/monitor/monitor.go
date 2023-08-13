@@ -1,7 +1,7 @@
 package monitor
 
 import (
-	"api/internal/storage"
+	cache "api/internal/storage/redis"
 	"api/pkg/ctrader"
 	"encoding/json"
 	"errors"
@@ -45,7 +45,7 @@ func Initialise(Pool string) (*MonitorSession, error) {
 	return session, nil
 }
 
-func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext) (err error) {
+func Start(session *MonitorSession, redisClient *cache.RedisClientWithContext) (err error) {
 	unexpectedError := false
 	go session.writePump()
 	for !unexpectedError {
@@ -59,7 +59,7 @@ func Start(session *MonitorSession, redisClient *storage.RedisClientWithContext)
 	return err
 }
 
-func (session *MonitorSession) monitor(redisClient *storage.RedisClientWithContext) (err error) {
+func (session *MonitorSession) monitor(redisClient *cache.RedisClientWithContext) (err error) {
 	msgUUID := uuid.NewString()
 	sharingCodePayloadVal := SharingCodePayload{SharingCode: session.Pool}
 	message := WsMessage[SharingCodePayload]{
@@ -191,7 +191,7 @@ func (session *MonitorSession) processMessage() []OpenPosition {
 
 }
 
-func (session *MonitorSession) forwardPosititons(pool string, redisClient *storage.RedisClientWithContext, positions []OpenPosition) error {
+func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache.RedisClientWithContext, positions []OpenPosition) error {
 	var positionChanges = []ctrader.CtraderMonitorMessage{}
 	var positionsName = fmt.Sprintf("storage-positions-pool-%s", pool)
 	if len(positions) == 0 {

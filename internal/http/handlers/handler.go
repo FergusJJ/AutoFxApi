@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"strconv"
@@ -8,39 +9,14 @@ import (
 	"time"
 
 	monitormanager "api/internal/monitor-manager"
-	"api/internal/storage"
+	"api/internal/storage/postgres"
+	cache "api/internal/storage/redis"
 	"api/pkg/whop"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-/*
-
-on connection sendHeartbeat function starts
-
-
-*/
-
-type API_KEY string
-
-const (
-	registerAction   = "register"
-	unregisterAction = "unregister"
-	ackAction        = "ack"
-)
-
-// var register = make(chan *websocket.Conn)
-// var unregister = make(chan *websocket.Conn)
-// var heartbeat = make(chan *websocket.Conn)
-// var ack = make(chan *websocket.Conn)
-// var errResp = make(chan *websocket.Conn)
-
-// var activeCids = make(map[string]API_KEY)
-// var wsClients = make(map[*websocket.Conn]client)
-// var AcceptedContentTypes = []string{"application/json"}
-
-// could check within some cache first if want to avoid spamming whop
-func HandleWhopValidate(c *fiber.Ctx) error {
+func HandleWhopValidateWrapper(c *fiber.Ctx, pg postgres.PGAccount) error {
 	license := c.Query("license")
 	if license == "" {
 		payload := invalidRequestResponse{
@@ -49,7 +25,8 @@ func HandleWhopValidate(c *fiber.Ctx) error {
 		}
 		return c.Status(fiber.StatusBadRequest).JSON(payload)
 	}
-	id, err := whop.CheckLicenseKey(license)
+
+	id, email, err := whop.CheckLicenseKey(license)
 	if err != nil {
 		if err.Error() == "WHOP_VALIDATE_LICENSE_API_KEY does not exist" {
 			payload := invalidRequestResponse{
@@ -79,9 +56,6 @@ func HandleWhopValidate(c *fiber.Ctx) error {
 
 		return c.Status(fiber.StatusBadRequest).JSON(payload)
 	}
-
-	//
-
 	_, licenseActive := ActiveClients[id]
 	if licenseActive {
 		payload := &invalidRequestResponse{}
@@ -89,6 +63,24 @@ func HandleWhopValidate(c *fiber.Ctx) error {
 		payload.Message = "This license key already has an active session"
 		return c.Status(fiber.StatusCreated).JSON(payload)
 	}
+	account := newAccount(license, email)
+	err = pg.CreateAccount(account)
+	if err != nil && err != sql.ErrNoRows {
+		log.Print(err)
+		payload := invalidRequestResponse{
+			ResponseCode: fiber.StatusInternalServerError,
+			Message:      "unable to create account",
+		}
+		log.Print(err)
+		return c.Status(fiber.StatusCreated).JSON(payload)
+	}
+
+	if account.ID != 0 {
+		log.Printf("created account, id: %d", account.ID)
+	} else {
+		log.Println("account already exists")
+	}
+
 	//
 	ActiveClients[id] = &Client{
 		Ts:     int(time.Now().UnixMilli()),
@@ -96,17 +88,19 @@ func HandleWhopValidate(c *fiber.Ctx) error {
 		Id:     id,
 		Pool:   []*Pool{},
 	}
+
 	payload := validLicenseKeyResponse{
 		ResponseCode: 201,
 		Cid:          id,
 	}
+
 	return c.Status(fiber.StatusCreated).JSON(payload)
 
 	// cid := uuid.New().String()
 
 }
 
-func HandleConfigureMonitorWrapper(c *fiber.Ctx, redisClient *storage.RedisClientWithContext) error {
+func HandleConfigureMonitorWrapper(c *fiber.Ctx, redisClient *cache.RedisClientWithContext) error {
 
 	payload := &monitormanager.MonitorManagerMessage{}
 	if err := c.BodyParser(payload); err != nil {
@@ -139,7 +133,7 @@ func HandleConfigureMonitorWrapper(c *fiber.Ctx, redisClient *storage.RedisClien
 		log.Print(err)
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
-	err = redisClient.PushUpdate(storage.MonitorUpdateKey, payloadJsonBytes)
+	err = redisClient.PushUpdate(cache.MonitorUpdateKey, payloadJsonBytes)
 	if err != nil {
 		log.Print(err)
 		return c.SendStatus(fiber.StatusInternalServerError)

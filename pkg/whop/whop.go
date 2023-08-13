@@ -9,12 +9,12 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-func CheckLicenseKey(lisenceKey string) (string, error) {
+func CheckLicenseKey(lisenceKey string) (string, string, error) {
 	requestUri := fmt.Sprintf("https://api.whop.com/api/v2/memberships/%s/validate_license", lisenceKey)
 	validateLicenseApiKey, err := config.Config("WHOP_VALIDATE_LICENSE_API_KEY")
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return "", "", err
 	}
 	req := fasthttp.AcquireRequest()
 	req.SetRequestURI(requestUri)
@@ -25,11 +25,11 @@ func CheckLicenseKey(lisenceKey string) (string, error) {
 	req.AppendBodyString("{\"metadata\":{\"newKey\":\"New Value\"}}")
 	resp := fasthttp.AcquireResponse()
 	if err := fasthttp.Do(req, resp); err != nil {
-		return "", err
+		return "", "", err
 	}
 	jsonResp := WhopValidateLicenseResponse{}
 	if err := json.Unmarshal(resp.Body(), &jsonResp); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if jsonResp.ID == "" {
@@ -37,11 +37,11 @@ func CheckLicenseKey(lisenceKey string) (string, error) {
 		jsonErrResp := WhopErrorResponse{}
 		err := json.Unmarshal(resp.Body(), &jsonErrResp)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		err = fmt.Errorf("%d|%s", jsonErrResp.Error.Status, jsonErrResp.Error.Message)
-		return "", err
+		return "", "", err
 	}
 
-	return jsonResp.ID, nil
+	return jsonResp.ID, jsonResp.Email, nil
 }

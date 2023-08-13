@@ -2,7 +2,8 @@ package router
 
 import (
 	handler "api/internal/http/handlers"
-	"api/internal/storage"
+	"api/internal/storage/postgres"
+	cache "api/internal/storage/redis"
 	wsHandler "api/internal/ws/handlers"
 	"log"
 	"time"
@@ -13,7 +14,7 @@ import (
 
 var positions = make(chan string)
 
-func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) error {
+func SetupRoutes(app *fiber.App, redisClient *cache.RedisClientWithContext, PGManager postgres.PGManager) error {
 	go func() {
 		staleCheckInterval := time.Second * 10
 		ticker := time.NewTicker(staleCheckInterval)
@@ -66,7 +67,7 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 	handleWsMonitorWrapper := func(c *websocket.Conn) {
 		wsHandler.HandleWsMonitor(c)
 	}
-	handleConfigureMonitorWrapper := func(c *fiber.Ctx) error {
+	handleConfigureMonitor := func(c *fiber.Ctx) error {
 		err := handler.HandleConfigureMonitorWrapper(c, redisClient)
 		if err != nil {
 			return err
@@ -74,13 +75,108 @@ func SetupRoutes(app *fiber.App, redisClient *storage.RedisClientWithContext) er
 		return nil
 	}
 
-	app.Get("/whop/validate", handler.HandleWhopValidate)
+	/*ACCOUNT ROUTES START*/
+	//Account create is probably redundant, will just lock behind bearer
+	handleCreateAccount := func(c *fiber.Ctx) error {
+		err := handler.HandleCreateAccountWrapper(c, PGManager)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	handleDeleteAccount := func(c *fiber.Ctx) error {
+		err := handler.HandleDeleteAccountWrapper(c, PGManager)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	handleUpdateAccount := func(c *fiber.Ctx) error {
+		err := handler.HandleUpdateAccountWrapper(c, PGManager)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	handleGetAccount := func(c *fiber.Ctx) error {
+		err := handler.HandleGetAccountWrapper(c, PGManager)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	/*ACCOUNT ROUTES END*/
+	/*AUTH ROUTES START*/
+	handleAuthAccount := func(c *fiber.Ctx) error {
+		err := handler.HandleAuthAccountWrapper(c, PGManager)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	handleRefreshToken := func(c *fiber.Ctx) error {
+		err := handler.HandlerRefreshTokenWrapper(c, PGManager)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	/*AUTH ROUTES END*/
+
+	/*WHOP ROUTES START*/
+	app.Get("/whop/validate", func(c *fiber.Ctx) error {
+		err := handler.HandleWhopValidateWrapper(c, PGManager)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	/*WHOP ROUTES START*/
+
+	/*USER ROUTES START*/
+	handleGetAllUserPosition := func(c *fiber.Ctx) error {
+		err := handler.HandleGetAllUserPositionWrapper(c, PGManager)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	handleDeleteUserPosition := func(c *fiber.Ctx) error {
+		err := handler.HandleDeleteUserPositionWrapper(c, PGManager)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	handleNewUserPosition := func(c *fiber.Ctx) error {
+		err := handler.HandleCreateUserPositionWrapper(c, PGManager)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	/*USER ROUTES END*/
 
 	app.Get("/ws/monitor", websocket.New(handleWsMonitorWrapper))
 
 	monitor := internal.Group("/monitor")
+	monitor.Post("/configure-monitor", handleConfigureMonitor)
 
-	monitor.Post("/configure-monitor", handleConfigureMonitorWrapper)
+	api := app.Group("/api")
+	account := api.Group("/account")
+	account.Post("/create", handleCreateAccount)
+	account.Post("/delete", handleDeleteAccount)
+	account.Post("/get", handleGetAccount)
+	account.Post("/update", handleUpdateAccount)
+
+	user := api.Group("/user")
+	user.Get("/position/all", handleGetAllUserPosition)
+	user.Post("/position/new", handleNewUserPosition)
+	user.Post("/position/delete", handleDeleteUserPosition)
+
+	//These routes need seperate grouping
+	api.Get("/auth/new", handleAuthAccount)
+	api.Post("/auth/refresh", handleRefreshToken)
 
 	app.Use(func(c *fiber.Ctx) error {
 		c.SendStatus(404)
