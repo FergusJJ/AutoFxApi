@@ -8,7 +8,9 @@ import (
 	"api/config"
 	"api/internal/http/middleware"
 	"api/internal/http/router"
-	"api/internal/storage"
+	"api/internal/storage/postgres"
+	pgdb "api/internal/storage/postgres"
+	cache "api/internal/storage/redis"
 	"api/pkg/shutdown"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,8 +18,8 @@ import (
 
 type Server struct {
 	app         *fiber.App
-	RedisClient *storage.RedisClientWithContext
-	PGStore     storage.PGStorage
+	RedisClient *cache.RedisClientWithContext
+	PGStore     pgdb.PGManager
 }
 
 var server = &Server{}
@@ -74,13 +76,23 @@ func (server *Server) buildServer(cfg fiber.Config) (func(), error) {
 		return nil, err
 	}
 
-	client, cleanup, err := storage.RedisInitialise()
+	client, cleanup, err := cache.RedisInitialise()
 	if err != nil {
 		return cleanup, err
 	}
 	server.RedisClient = client
 
-	err = router.SetupRoutes(server.app, server.RedisClient)
+	store, err := postgres.NewPostgresStore()
+	if err != nil {
+		return cleanup, err
+	}
+	cleanup, err = store.Init(cleanup)
+	if err != nil {
+		return cleanup, err
+	}
+	server.PGStore = store
+
+	err = router.SetupRoutes(server.app, server.RedisClient, server.PGStore)
 	if err != nil {
 		return cleanup, err
 	}
@@ -89,6 +101,6 @@ func (server *Server) buildServer(cfg fiber.Config) (func(), error) {
 
 /*
 
-
-
- */
+psql -d copyfx_db -U user_default
+ docker exec -it api-postgres-1 "bash"
+*/

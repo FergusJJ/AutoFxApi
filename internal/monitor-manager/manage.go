@@ -1,7 +1,7 @@
 package monitormanager
 
 import (
-	"api/internal/storage"
+	cache "api/internal/storage/redis"
 	"encoding/json"
 	"log"
 	"os"
@@ -53,13 +53,13 @@ func (m *Manager) StopAll() {
 	}
 }
 
-func (m *Manager) Manage(client *storage.RedisClientWithContext) error {
+func (m *Manager) Manage(client *cache.RedisClientWithContext) error {
 	pollInterval := time.NewTicker(time.Second * 5)
 	for {
 		select {
 		case <-pollInterval.C:
 			//pull any updates from redis
-			updateBytes, err := client.PopUpdate(storage.MonitorUpdateKey)
+			updateBytes, err := client.PopUpdate(cache.MonitorUpdateKey)
 			if err != nil && err.Error() != "redis: nil" {
 				return err
 			}

@@ -1,27 +1,11 @@
 package handler
 
 import (
-	monitormanager "api/internal/monitor-manager"
 	"api/pkg/ctrader"
 	"log"
 
 	"github.com/gofiber/websocket/v2"
 )
-
-/*
-	"7venWwvj": {
-		Id:         "7venWwvj",
-		Unregister: make(chan *Client),
-		WsClients:  make(map[string]*Client),
-		Broadcast:  make(chan *ctrader.CtraderMonitorMessage),
-	},
-	"pool1": {
-		Id:         "pool1",
-		Unregister: make(chan *Client),
-		WsClients:  make(map[string]*Client),
-		Broadcast:  make(chan *ctrader.CtraderMonitorMessage),
-	},
-*/
 
 var WsPools = map[string]*Pool{}
 var ActiveClients = map[string]*Client{}
@@ -43,9 +27,25 @@ type validLicenseKeyResponse struct {
 	Cid          string `json:"cid"`
 }
 
-type monitorUpdateResponse struct {
-	MonitorManagerMessage *monitormanager.MonitorManagerMessage `json:"monitorManagerMessage"`
-	IsUpdate              bool                                  `json:"isUpdate"`
+type CreateAccountRequest struct {
+	LicenseKey string `json:"licenseKey"`
+	Email      string `json:"email"`
+}
+
+type AccountCreatedResponse struct {
+	ID         int    `json:"id"`
+	LicenseKey string `json:"licenseKey"`
+}
+
+type AccountRequest struct {
+	ID         int    `json:"id"`
+	LicenseKey string `json:"licenseKey"`
+}
+
+type UpdateAccountRequest struct {
+	ID         int    `json:"id"`
+	LicenseKey string `json:"licenseKey"`
+	Email      string `json:"email"`
 }
 
 type Pool struct {

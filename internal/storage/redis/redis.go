@@ -1,4 +1,4 @@
-package storage
+package redis
 
 import (
 	"api/pkg/ctrader"

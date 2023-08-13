@@ -2,7 +2,7 @@ package main
 
 import (
 	"api/internal/monitor"
-	"api/internal/storage"
+	cache "api/internal/storage/redis"
 	"api/pkg/shutdown"
 	"log"
 	"os"
@@ -33,7 +33,7 @@ func main() {
 
 func start(Pool string) (func(), error) {
 
-	client, cleanup, err := storage.RedisInitialise()
+	client, cleanup, err := cache.RedisInitialise()
 	if err != nil {
 		return cleanup, err
 	}
