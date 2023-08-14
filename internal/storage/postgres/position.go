@@ -56,9 +56,16 @@ func (s *PostgresStore) DeleteUserPosition(accountID int, positionID string) err
 	AND account_id = $2;
 	`
 
-	_, err := s.db.ExecContext(ctx, query, positionID, accountID)
+	result, err := s.db.ExecContext(ctx, query, positionID, accountID)
 	if err != nil {
 		return fmt.Errorf("error deleting user position: %+v", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking rows affected: %+v", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("no user position found with position_id: %s for account_id: %d", positionID, accountID)
 	}
 	return nil
 }

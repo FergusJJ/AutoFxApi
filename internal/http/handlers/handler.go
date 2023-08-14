@@ -93,7 +93,6 @@ func HandleWhopValidateWrapper(c *fiber.Ctx, pg postgres.PGAccount) error {
 		ResponseCode: 201,
 		Cid:          id,
 	}
-
 	return c.Status(fiber.StatusCreated).JSON(payload)
 
 	// cid := uuid.New().String()
