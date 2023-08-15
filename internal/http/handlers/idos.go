@@ -63,6 +63,7 @@ func NewPool(name string) *Pool {
 		Broadcast:  make(chan *ctrader.CtraderMonitorMessage),
 	}
 	WsPools[name] = newPool
+	log.Printf("%s: added to wspools, length = %d", name, len(WsPools))
 	return newPool
 }
 
@@ -84,6 +85,7 @@ func (pool *Pool) Start() {
 			}
 
 		case message := <-pool.Broadcast:
+			log.Print("broadcasting messages")
 			for _, client := range pool.WsClients {
 				if err := client.WsConn.WriteJSON(message); err != nil {
 					log.Println(err)

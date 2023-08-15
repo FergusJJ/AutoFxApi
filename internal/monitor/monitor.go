@@ -234,6 +234,7 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 			direction = "BUY"
 		}
 		currentMessageStruct := ctrader.CtraderMonitorMessage{
+			Pool:        session.Pool,
 			CopyPID:     pid,
 			SymbolID:    positionMapping[pid].Symbol.SymbolID,
 			Price:       positionMapping[pid].EntryPrice, //send entry price if position is opened
@@ -251,6 +252,7 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 		//send new positions to redis
 		log.Printf("sending %d position changes", len(positionChanges))
 		for _, pos := range positionChanges {
+			log.Println(pos)
 			jsonBytes, err := json.Marshal(pos)
 			if err != nil {
 				log.Fatal(err)

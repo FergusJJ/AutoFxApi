@@ -41,8 +41,11 @@ func HandleWsMonitor(c *websocket.Conn) {
 		pool = strings.TrimSpace(pool)
 		_, ok := handler.WsPools[pool] //if pool doesn't exist, create pool
 		if !ok {
+			log.Print("pool not found, adding pool")
 			newPool := handler.NewPool(pool) //pool created and added to WsPools
 			go newPool.Start()
+		} else {
+			log.Printf("pool: %s exists, total pools: %d", pool, len(handler.WsPools))
 		}
 		if handler.WsPools[pool].WsClients[incomingId] != nil {
 			cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, fmt.Sprintf("connection to pool: %s already registered, close previous connection before attempting to reconnect", pool))
