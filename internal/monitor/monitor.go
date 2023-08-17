@@ -180,12 +180,17 @@ func (session *MonitorSession) processMessage() []OpenPosition {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		message, ok := decodedMessage.(ProtoJMTraderPositionListRes)
 		if !ok {
 			log.Fatal("couldn't cast message to ProtoJMTraderPositionListRes")
 		}
-		return message.Position
+		positions := []OpenPosition{}
+		for _, pos := range message.Position {
+			pos.Volume = pos.Volume / 100
+			positions = append(positions, pos)
+		}
+		return positions
+	default:
 	}
 	return []OpenPosition{}
 
@@ -242,7 +247,7 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 			Direction:   direction,
 			MessageType: "OPEN",
 		}
-		log.Printf("%+v", positionMapping[pid].Symbol)
+		log.Printf("position change formatted: %+v", positionMapping[pid])
 		positionChanges = append(positionChanges, currentMessageStruct)
 
 	}
@@ -252,7 +257,6 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 		//send new positions to redis
 		log.Printf("sending %d position changes", len(positionChanges))
 		for _, pos := range positionChanges {
-			log.Println(pos)
 			jsonBytes, err := json.Marshal(pos)
 			if err != nil {
 				log.Fatal(err)

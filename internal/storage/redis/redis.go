@@ -138,6 +138,8 @@ func (c *RedisClientWithContext) PopPositionUpdate() (*ctrader.CtraderMonitorMes
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("yoyoy %+v", message) //yoyoy &{Pool:jtvNx6UQezqu CopyPID:55738388 SymbolID:0 Price:0 Volume:0 Direction:BUY MessageType:CLOSE}
+
 	return message, nil
 }
 

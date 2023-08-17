@@ -75,8 +75,8 @@ func HandleGetAllUserPositionWrapper(c *fiber.Ctx, pg postgres.PGPosition) error
 
 	for _, v := range positions {
 		entry := map[string]string{
-			"positionID":    v.PositionID,
-			"copyPostionID": v.CopyPositionID,
+			"positionID":     v.PositionID,
+			"copyPositionID": v.CopyPositionID,
 		}
 		data = append(data, entry)
 	}
