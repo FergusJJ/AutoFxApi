@@ -15,22 +15,6 @@ import (
 	"github.com/google/uuid"
 )
 
-/*
-Docker output:
-
-
-2023-06-28 18:16:25 2023/06/28 17:16:25 sending 2 position changes
-2023-06-28 21:28:42 2023/06/28 20:28:42 websocket: close 1006 (abnormal closure): unexpected EOF
-2023-06-28 21:28:42 2023/06/28 20:28:42 Redis connection closed successfully
-2023-06-28 21:28:43 exit status 1
-
-2023-06-29 14:34:52 2023/06/29 13:34:52 write error: write tcp 172.18.0.4:41152->85.234.140.193:443: write: broken pipe
-2023-06-29 14:34:52 2023/06/29 13:34:52 write tcp 172.18.0.4:41152->85.234.140.193:443: write: broken pipe
-2023-06-29 14:34:52 2023/06/29 13:34:52 Redis connection closed successfully
-2023-06-29 14:34:52 exit status 1
-
-*/
-
 func Initialise(Pool string) (*MonitorSession, error) {
 	log.Printf("initialising monitor %s\n", Pool)
 	var session = &MonitorSession{}
@@ -184,6 +168,7 @@ func (session *MonitorSession) processMessage() []OpenPosition {
 		if !ok {
 			log.Fatal("couldn't cast message to ProtoJMTraderPositionListRes")
 		}
+		log.Printf("%+v", message)
 		positions := []OpenPosition{}
 		for _, pos := range message.Position {
 			pos.Volume = pos.Volume / 100
@@ -212,6 +197,13 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 	if err != nil {
 		log.Fatal(err)
 	}
+	if len(closedPositions) != 0 {
+		log.Println("closed", closedPositions)
+	}
+	if len(openPositions) != 0 {
+		log.Println("opened", openPositions)
+	}
+
 	for _, pid := range closedPositions {
 		direction := ""
 		if positionMapping[pid].TradeSide == 2 {
@@ -247,7 +239,6 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 			Direction:   direction,
 			MessageType: "OPEN",
 		}
-		log.Printf("position change formatted: %+v", positionMapping[pid])
 		positionChanges = append(positionChanges, currentMessageStruct)
 
 	}
