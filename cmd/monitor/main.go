@@ -8,6 +8,10 @@ import (
 	"os"
 )
 
+/*
+monitor is only updating closed positions in redis when a new position is opened
+*/
+
 func main() {
 	var exitCode int
 	defer func() {

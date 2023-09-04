@@ -72,9 +72,10 @@ func (session *MonitorSession) monitor(redisClient *cache.RedisClientWithContext
 
 		session.Client.CurrentMessage = message
 		positions := session.processMessage()
-		if len(positions) == 0 {
-			continue
-		}
+		// if len(positions) == 0 {
+		// 	continue
+		// }
+
 		err = session.forwardPosititons(session.Pool, redisClient, positions)
 		if err != nil {
 			log.Println(err)
@@ -168,7 +169,7 @@ func (session *MonitorSession) processMessage() []OpenPosition {
 		if !ok {
 			log.Fatal("couldn't cast message to ProtoJMTraderPositionListRes")
 		}
-		log.Printf("%+v", message)
+		// log.Printf("%+v", message)
 		positions := []OpenPosition{}
 		for _, pos := range message.Position {
 			pos.Volume = pos.Volume / 100
@@ -184,15 +185,17 @@ func (session *MonitorSession) processMessage() []OpenPosition {
 func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache.RedisClientWithContext, positions []OpenPosition) error {
 	var positionChanges = []ctrader.CtraderMonitorMessage{}
 	var positionsName = fmt.Sprintf("storage-positions-pool-%s", pool)
-	if len(positions) == 0 {
-		log.Println("pos is 0 ")
-		return nil
-	}
+	//if len positions is 0, do still need to check whether positions have been closed
+	// if len(positions) == 0 {
+	// 	log.Println("pos is 0 ")
+	// 	return nil
+	// }
 	positionMapping := positionsToPIDSlice(positions)
 	pidsSlice := []string{}
 	for k := range positionMapping {
 		pidsSlice = append(pidsSlice, k)
 	}
+
 	closedPositions, openPositions, err := redisClient.ComparePositions(positionsName, pidsSlice)
 	if err != nil {
 		log.Fatal(err)

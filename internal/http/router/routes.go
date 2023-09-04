@@ -53,8 +53,7 @@ func SetupRoutes(app *fiber.App, redisClient *cache.RedisClientWithContext, PGMa
 					log.Print(positionUpdate)
 					_, ok := handler.WsPools[positionUpdate.Pool]
 					if !ok {
-						log.Print("pool not found?")
-
+						log.Print("pool not found, no connected sessions to broadcast")
 						break
 					}
 					if len(handler.WsPools[positionUpdate.Pool].WsClients) > 0 {
