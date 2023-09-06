@@ -41,7 +41,6 @@ func SetupRoutes(app *fiber.App, redisClient *cache.RedisClientWithContext, PGMa
 					//need to unsubscribe from pools too
 
 				}
-				log.Println("currentIds len: ", len(handler.ActiveClients))
 			case <-checkPosition.C:
 				positionUpdate, err := redisClient.PopPositionUpdate()
 				if err != nil {

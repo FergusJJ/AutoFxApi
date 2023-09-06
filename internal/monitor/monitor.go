@@ -71,7 +71,10 @@ func (session *MonitorSession) monitor(redisClient *cache.RedisClientWithContext
 		}
 
 		session.Client.CurrentMessage = message
-		positions := session.processMessage()
+		positions, pass := session.processMessage()
+		if !pass {
+			continue
+		}
 		// if len(positions) == 0 {
 		// 	continue
 		// }
@@ -122,7 +125,7 @@ func (session *MonitorSession) writePump() {
 	}
 }
 
-func (session *MonitorSession) processMessage() []OpenPosition {
+func (session *MonitorSession) processMessage() ([]OpenPosition, bool) {
 
 	messageBuffer := &MessageBuf{
 		MessageType: SliceFromMessageType(1),
@@ -175,10 +178,10 @@ func (session *MonitorSession) processMessage() []OpenPosition {
 			pos.Volume = pos.Volume / 100
 			positions = append(positions, pos)
 		}
-		return positions
+		return positions, true
 	default:
 	}
-	return []OpenPosition{}
+	return []OpenPosition{}, false
 
 }
 
@@ -200,13 +203,6 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 	if err != nil {
 		log.Fatal(err)
 	}
-	if len(closedPositions) != 0 {
-		log.Println("closed", closedPositions)
-	}
-	if len(openPositions) != 0 {
-		log.Println("opened", openPositions)
-	}
-
 	for _, pid := range closedPositions {
 		direction := ""
 		if positionMapping[pid].TradeSide == 2 {
