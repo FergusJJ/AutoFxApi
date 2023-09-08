@@ -49,7 +49,7 @@ func SetupRoutes(app *fiber.App, redisClient *cache.RedisClientWithContext, PGMa
 
 				if positionUpdate != nil {
 					log.Print("new position update")
-					log.Print(positionUpdate)
+					// log.Print(positionUpdate)
 					_, ok := handler.WsPools[positionUpdate.Pool]
 					if !ok {
 						log.Print("pool not found, no connected sessions to broadcast")

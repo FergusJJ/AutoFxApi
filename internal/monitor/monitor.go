@@ -193,9 +193,11 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 	// 	log.Println("pos is 0 ")
 	// 	return nil
 	// }
+
 	positionMapping := positionsToPIDSlice(positions)
 	pidsSlice := []string{}
 	for k := range positionMapping {
+
 		pidsSlice = append(pidsSlice, k)
 	}
 
@@ -211,13 +213,15 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 			direction = "BUY"
 		}
 		currentMessageStruct := ctrader.CtraderMonitorMessage{
-			Pool:        session.Pool,
-			CopyPID:     pid,
-			SymbolID:    positionMapping[pid].Symbol.SymbolID,
-			Price:       positionMapping[pid].CurrentPrice, //send current price if position is closed
-			Volume:      positionMapping[pid].Volume,
-			Direction:   direction,
-			MessageType: "CLOSE",
+			Symbol:          positionMapping[pid].Symbol.SymbolName,
+			Pool:            session.Pool,
+			CopyPID:         pid,
+			SymbolID:        positionMapping[pid].Symbol.SymbolID,
+			Price:           positionMapping[pid].CurrentPrice, //send current price if position is closed
+			Volume:          positionMapping[pid].Volume,
+			Direction:       direction,
+			OpenedTimestamp: positionMapping[pid].OpenTimestamp,
+			MessageType:     "CLOSE",
 		}
 		positionChanges = append(positionChanges, currentMessageStruct)
 
@@ -230,13 +234,15 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 			direction = "BUY"
 		}
 		currentMessageStruct := ctrader.CtraderMonitorMessage{
-			Pool:        session.Pool,
-			CopyPID:     pid,
-			SymbolID:    positionMapping[pid].Symbol.SymbolID,
-			Price:       positionMapping[pid].EntryPrice, //send entry price if position is opened
-			Volume:      positionMapping[pid].Volume,
-			Direction:   direction,
-			MessageType: "OPEN",
+			Symbol:          positionMapping[pid].Symbol.SymbolName,
+			Pool:            session.Pool,
+			CopyPID:         pid,
+			SymbolID:        positionMapping[pid].Symbol.SymbolID,
+			Price:           positionMapping[pid].EntryPrice, //send entry price if position is opened
+			Volume:          positionMapping[pid].Volume,
+			Direction:       direction,
+			OpenedTimestamp: positionMapping[pid].OpenTimestamp,
+			MessageType:     "OPEN",
 		}
 		positionChanges = append(positionChanges, currentMessageStruct)
 
