@@ -41,7 +41,6 @@ func SetupRoutes(app *fiber.App, redisClient *cache.RedisClientWithContext, PGMa
 					//need to unsubscribe from pools too
 
 				}
-				log.Println("currentIds len: ", len(handler.ActiveClients))
 			case <-checkPosition.C:
 				positionUpdate, err := redisClient.PopPositionUpdate()
 				if err != nil {
@@ -50,11 +49,10 @@ func SetupRoutes(app *fiber.App, redisClient *cache.RedisClientWithContext, PGMa
 
 				if positionUpdate != nil {
 					log.Print("new position update")
-					log.Print(positionUpdate)
+					// log.Print(positionUpdate)
 					_, ok := handler.WsPools[positionUpdate.Pool]
 					if !ok {
-						log.Print("pool not found?")
-
+						log.Print("pool not found, no connected sessions to broadcast")
 						break
 					}
 					if len(handler.WsPools[positionUpdate.Pool].WsClients) > 0 {

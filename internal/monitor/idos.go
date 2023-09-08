@@ -171,9 +171,17 @@ func SliceFromMessageType(MessageType int) map[int][]string {
 
 	case 4259:
 		return map[int][]string{
-			1: {"int:1", "string:payloadType", "string:enum", "int:0"},
-			2: {"int:2", "string:position", "array:SE", "int:1"},
-			3: {"int:3", "string:nextCursor", "string:string", "int:0"}}
+			1:  {"int:1", "string:payloadType", "string:enum", "int:0"},
+			2:  {"int:2", "string:position", "array:SE", "int:1"},
+			3:  {"int:3", "string:nextCursor", "string:string", "int:0"},
+			4:  {"int:4", "string:equity", "string:int64", "int:0"},
+			5:  {"int:5", "string:maxEquityCurrentDay", "string:int64", "int:0"},
+			6:  {"int:6", "string:minEquityCurrentDay", "string:int64", "int:0"},
+			7:  {"int:7", "string:balance", "string:int64", "int:0"},
+			8:  {"int:8", "string:traderTimeWeightedRoiCurrentDay", "string:int64", "int:0"},
+			9:  {"int:9", "string:moneyDigits", "string:uint32", "int:0"},
+			10: {"int:10", "string:traderAllTimeTWRoi", "string:int64", "int:0"},
+		}
 		// return
 
 	case 42590:
@@ -207,14 +215,18 @@ func SliceFromMessageType(MessageType int) map[int][]string {
 
 	case 425900:
 		return map[int][]string{
-			1: {"int:1", "string:symbolName", "string:string", "int:1"},
-			2: {"int:2", "string:digits", "string:int32", "int:1"},
-			3: {"int:3", "string:pipPosition", "string:int32", "int:1"},
-			4: {"int:4", "string:symbolId", "string:int64", "int:0"},
-			5: {"int:5", "string:description", "string:string", "int:0"},
-			6: {"int:6", "string:baseAssetName", "string:string", "int:0"},
-			7: {"int:7", "string:baseAssetType", "string:enum", "int:0"},
-			8: {"int:8", "string:assetClassDefaultLots", "string:bool", "int:0"}}
+			1:  {"int:1", "string:symbolName", "string:string", "int:1"},
+			2:  {"int:2", "string:digits", "string:int32", "int:1"},
+			3:  {"int:3", "string:pipPosition", "string:int32", "int:1"},
+			4:  {"int:4", "string:symbolId", "string:int64", "int:0"},
+			5:  {"int:5", "string:description", "string:string", "int:0"},
+			6:  {"int:6", "string:baseAssetName", "string:string", "int:0"},
+			7:  {"int:7", "string:baseAssetType", "string:enum", "int:0"},
+			8:  {"int:8", "string:assetClassDefaultLots", "string:bool", "int:0"},
+			9:  {"int:9", "string:measurementUnits", "string:string", "int:0"},
+			10: {"int:10", "string:quoteAssetName", "string:string", "int:0"},
+			11: {"int:11", "string:quoteAssetType", "string:enum", "int:0"},
+		}
 
 	case 4314: //initialRequest
 		return map[int][]string{1: {"int:1", "string:payloadType", "string:enum", "int:0"}, 2: {"int:2", "string:sharingCode", "string:string", "int:1"}}

@@ -61,7 +61,8 @@ func RedisGetClient(address string, database int, password ...string) *RedisClie
 func (c *RedisClientWithContext) ComparePositions(storageSetName string, currentSet []string) ([]string, []string, error) {
 	var diffInStorage []string
 	var diffInCurrent []string
-
+	log.Println("current set = ", currentSet)
+	//if there are no positions, then will not return an empty set
 	// Retrieve all members of the storage set
 	membersCmd := c.RDB.SMembers(context.TODO(), storageSetName)
 	storageMembers, err := membersCmd.Result()
@@ -99,6 +100,9 @@ func (c *RedisClientWithContext) ComparePositions(storageSetName string, current
 	if len(diffInCurrent) > 0 || len(diffInStorage) > 0 {
 		err := c.overrideSet(storageSetName, currentSet)
 		if err != nil {
+			// log.Println("diff in current = ", diffInCurrent)
+			// log.Println("diff in storage = ", diffInStorage)
+
 			log.Fatal(err)
 		}
 	}
@@ -109,7 +113,11 @@ func (c *RedisClientWithContext) overrideSet(setKey string, members []string) er
 	// return nil
 	tx := c.RDB.TxPipeline()
 	tx.Del(c.Ctx, setKey)
-	tx.SAdd(c.Ctx, setKey, members)
+	if len(members) != 0 {
+
+		tx.SAdd(c.Ctx, setKey, members)
+	}
+
 	_, err := tx.Exec(c.Ctx)
 	if err != nil {
 		return err
@@ -138,7 +146,6 @@ func (c *RedisClientWithContext) PopPositionUpdate() (*ctrader.CtraderMonitorMes
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("yoyoy %+v", message) //yoyoy &{Pool:jtvNx6UQezqu CopyPID:55738388 SymbolID:0 Price:0 Volume:0 Direction:BUY MessageType:CLOSE}
 
 	return message, nil
 }

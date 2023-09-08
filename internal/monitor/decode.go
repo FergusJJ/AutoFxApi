@@ -81,7 +81,7 @@ func (messageProcessor *messageProcessor) parseInitialPayload(msgTypeFields map[
 			decodedWsMessage = DecodeInitial(messageProcessor, subKey, decodedWsMessage, keyIndexStr, subValueType)
 		}
 		if messageProcessor.position == currPos {
-			log.Fatal("block not implemented")
+			log.Fatal("block not implemented in parse initial")
 		}
 	}
 	return decodedWsMessage
@@ -128,7 +128,7 @@ func (messageProcessor *messageProcessor) decodeToSpecificPayload(msgTypeFields 
 			}
 		}
 		if messageProcessor.position == currPos {
-			log.Fatal("block not implemented")
+			log.Fatal("block not implemented in decode specific")
 		}
 	}
 	//need to check whether tmpMap has any keys

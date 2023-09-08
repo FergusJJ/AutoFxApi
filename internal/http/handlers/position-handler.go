@@ -73,10 +73,28 @@ func HandleGetAllUserPositionWrapper(c *fiber.Ctx, pg postgres.PGPosition) error
 	}
 	data := []map[string]string{}
 
+	/*
+		PositionID      string    `json:"positionID"`
+		AccountID       int       `json:"accountID"`
+		CopyPositionID  string    `json:"copyPositionID"`
+		OpenedTimestamp time.Time `json:"openedTimestamp"`
+		Symbol          string    `json:"symbol"`
+		SymbolID        int       `json:"symbolID"`
+		Volume          int       `json:"volume"`
+		Side            string    `json:"Side"`
+		AveragePrice    string    `json:"averagePrice"`
+	*/
+
 	for _, v := range positions {
 		entry := map[string]string{
-			"positionID":     v.PositionID,
-			"copyPositionID": v.CopyPositionID,
+			"positionID":      v.PositionID,
+			"copyPositionID":  v.CopyPositionID,
+			"openedTimestamp": v.OpenedTimestamp,
+			"symbol":          v.Symbol,
+			"symbolID":        fmt.Sprint(v.SymbolID),
+			"volume":          fmt.Sprint(v.Volume),
+			"side":            v.Side,
+			"averagePrice":    v.AveragePrice,
 		}
 		data = append(data, entry)
 	}
@@ -85,8 +103,14 @@ func HandleGetAllUserPositionWrapper(c *fiber.Ctx, pg postgres.PGPosition) error
 
 func HandleCreateUserPositionWrapper(c *fiber.Ctx, pg postgres.PGPosition) error {
 	type createPositionReqBody struct {
-		PositionID     string `json:"positionID"`
-		CopyPositionID string `json:"copyPositionID"`
+		PositionID      string `json:"positionID"`
+		CopyPositionID  string `json:"copyPositionID"`
+		OpenedTimestamp string `json:"openedTimestamp"`
+		Symbol          string `json:"symbol"`
+		SymbolID        string `json:"symbolID"`
+		Volume          string `json:"volume"`
+		Side            string `json:"Side"`
+		AveragePrice    string `json:"averagePrice"`
 	}
 	var jwtSub int
 	var subAsString string
@@ -111,12 +135,30 @@ func HandleCreateUserPositionWrapper(c *fiber.Ctx, pg postgres.PGPosition) error
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "failed to store position, fields cannot be empty"})
 	}
 
-	userPosition := &postgres.UserPosition{
-		PositionID:     createPositionReq.PositionID,
-		CopyPositionID: createPositionReq.CopyPositionID,
-		AccountID:      jwtSub,
+	symbolIDInt, err := strconv.Atoi(createPositionReq.SymbolID)
+	if err != nil {
+		log.Print(err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "invalid data in request body, symbol"})
 	}
-	err := pg.CreateUserPosition(userPosition)
+	// volumeInt := int(newPos.Volume)
+	volumeInt, err := strconv.Atoi(createPositionReq.Volume)
+	if err != nil {
+		log.Print(err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "invalid data in request body, volume"})
+	}
+
+	userPosition := &postgres.UserPosition{
+		PositionID:      createPositionReq.PositionID,
+		CopyPositionID:  createPositionReq.CopyPositionID,
+		AccountID:       jwtSub,
+		OpenedTimestamp: createPositionReq.OpenedTimestamp,
+		Symbol:          createPositionReq.Symbol,
+		SymbolID:        symbolIDInt,
+		Volume:          volumeInt,
+		Side:            createPositionReq.Side,
+		AveragePrice:    createPositionReq.AveragePrice,
+	}
+	err = pg.CreateUserPosition(userPosition)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "unable to store duplicate position"})

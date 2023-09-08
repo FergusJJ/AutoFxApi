@@ -15,22 +15,6 @@ import (
 	"github.com/google/uuid"
 )
 
-/*
-Docker output:
-
-
-2023-06-28 18:16:25 2023/06/28 17:16:25 sending 2 position changes
-2023-06-28 21:28:42 2023/06/28 20:28:42 websocket: close 1006 (abnormal closure): unexpected EOF
-2023-06-28 21:28:42 2023/06/28 20:28:42 Redis connection closed successfully
-2023-06-28 21:28:43 exit status 1
-
-2023-06-29 14:34:52 2023/06/29 13:34:52 write error: write tcp 172.18.0.4:41152->85.234.140.193:443: write: broken pipe
-2023-06-29 14:34:52 2023/06/29 13:34:52 write tcp 172.18.0.4:41152->85.234.140.193:443: write: broken pipe
-2023-06-29 14:34:52 2023/06/29 13:34:52 Redis connection closed successfully
-2023-06-29 14:34:52 exit status 1
-
-*/
-
 func Initialise(Pool string) (*MonitorSession, error) {
 	log.Printf("initialising monitor %s\n", Pool)
 	var session = &MonitorSession{}
@@ -87,10 +71,14 @@ func (session *MonitorSession) monitor(redisClient *cache.RedisClientWithContext
 		}
 
 		session.Client.CurrentMessage = message
-		positions := session.processMessage()
-		if len(positions) == 0 {
+		positions, pass := session.processMessage()
+		if !pass {
 			continue
 		}
+		// if len(positions) == 0 {
+		// 	continue
+		// }
+
 		err = session.forwardPosititons(session.Pool, redisClient, positions)
 		if err != nil {
 			log.Println(err)
@@ -137,7 +125,7 @@ func (session *MonitorSession) writePump() {
 	}
 }
 
-func (session *MonitorSession) processMessage() []OpenPosition {
+func (session *MonitorSession) processMessage() ([]OpenPosition, bool) {
 
 	messageBuffer := &MessageBuf{
 		MessageType: SliceFromMessageType(1),
@@ -184,30 +172,35 @@ func (session *MonitorSession) processMessage() []OpenPosition {
 		if !ok {
 			log.Fatal("couldn't cast message to ProtoJMTraderPositionListRes")
 		}
+		// log.Printf("%+v", message)
 		positions := []OpenPosition{}
 		for _, pos := range message.Position {
 			pos.Volume = pos.Volume / 100
 			positions = append(positions, pos)
 		}
-		return positions
+		return positions, true
 	default:
 	}
-	return []OpenPosition{}
+	return []OpenPosition{}, false
 
 }
 
 func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache.RedisClientWithContext, positions []OpenPosition) error {
 	var positionChanges = []ctrader.CtraderMonitorMessage{}
 	var positionsName = fmt.Sprintf("storage-positions-pool-%s", pool)
-	if len(positions) == 0 {
-		log.Println("pos is 0 ")
-		return nil
-	}
+	//if len positions is 0, do still need to check whether positions have been closed
+	// if len(positions) == 0 {
+	// 	log.Println("pos is 0 ")
+	// 	return nil
+	// }
+
 	positionMapping := positionsToPIDSlice(positions)
 	pidsSlice := []string{}
 	for k := range positionMapping {
+
 		pidsSlice = append(pidsSlice, k)
 	}
+
 	closedPositions, openPositions, err := redisClient.ComparePositions(positionsName, pidsSlice)
 	if err != nil {
 		log.Fatal(err)
@@ -220,13 +213,15 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 			direction = "BUY"
 		}
 		currentMessageStruct := ctrader.CtraderMonitorMessage{
-			Pool:        session.Pool,
-			CopyPID:     pid,
-			SymbolID:    positionMapping[pid].Symbol.SymbolID,
-			Price:       positionMapping[pid].CurrentPrice, //send current price if position is closed
-			Volume:      positionMapping[pid].Volume,
-			Direction:   direction,
-			MessageType: "CLOSE",
+			Symbol:          positionMapping[pid].Symbol.SymbolName,
+			Pool:            session.Pool,
+			CopyPID:         pid,
+			SymbolID:        positionMapping[pid].Symbol.SymbolID,
+			Price:           positionMapping[pid].CurrentPrice, //send current price if position is closed
+			Volume:          positionMapping[pid].Volume,
+			Direction:       direction,
+			OpenedTimestamp: positionMapping[pid].OpenTimestamp,
+			MessageType:     "CLOSE",
 		}
 		positionChanges = append(positionChanges, currentMessageStruct)
 
@@ -239,15 +234,16 @@ func (session *MonitorSession) forwardPosititons(pool string, redisClient *cache
 			direction = "BUY"
 		}
 		currentMessageStruct := ctrader.CtraderMonitorMessage{
-			Pool:        session.Pool,
-			CopyPID:     pid,
-			SymbolID:    positionMapping[pid].Symbol.SymbolID,
-			Price:       positionMapping[pid].EntryPrice, //send entry price if position is opened
-			Volume:      positionMapping[pid].Volume,
-			Direction:   direction,
-			MessageType: "OPEN",
+			Symbol:          positionMapping[pid].Symbol.SymbolName,
+			Pool:            session.Pool,
+			CopyPID:         pid,
+			SymbolID:        positionMapping[pid].Symbol.SymbolID,
+			Price:           positionMapping[pid].EntryPrice, //send entry price if position is opened
+			Volume:          positionMapping[pid].Volume,
+			Direction:       direction,
+			OpenedTimestamp: positionMapping[pid].OpenTimestamp,
+			MessageType:     "OPEN",
 		}
-		log.Printf("position change formatted: %+v", positionMapping[pid])
 		positionChanges = append(positionChanges, currentMessageStruct)
 
 	}
