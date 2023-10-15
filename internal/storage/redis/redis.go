@@ -61,7 +61,7 @@ func RedisGetClient(address string, database int, password ...string) *RedisClie
 func (c *RedisClientWithContext) ComparePositions(storageSetName string, currentSet []string) ([]string, []string, error) {
 	var diffInStorage []string
 	var diffInCurrent []string
-	log.Println("current set = ", currentSet)
+	// log.Println("current set = ", currentSet)
 	//if there are no positions, then will not return an empty set
 	// Retrieve all members of the storage set
 	membersCmd := c.RDB.SMembers(context.TODO(), storageSetName)

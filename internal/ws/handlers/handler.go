@@ -28,15 +28,18 @@ func HandleWsMonitor(c *websocket.Conn) {
 		return
 	}
 
-	monitorPools := c.Headers("Pools") //should send a "," seperated list of the pools that the client wants to subscribe to, if none are sent then return
-	if monitorPools == "" {
-		//close conn, send message
-		log.Printf("id %s has not specified any pools", incomingId)
-		return
-	}
+	//old code that allowed for new pools to be spun up per client request
+	// monitorPools := c.Headers("Pools") //should send a "," seperated list of the pools that the client wants to subscribe to, if none are sent then return
+	// if monitorPools == "" {
+	// 	//close conn, send message
+	// 	log.Printf("id %s has not specified any pools", incomingId)
+	// 	return
+	// }
+	// poolsSlice := strings.Split(monitorPools, ",")
 
-	//check that all pools exist before connecting
-	poolsSlice := strings.Split(monitorPools, ",")
+	//only want predefined pools
+	poolsSlice := []string{"7venWwvj"}
+
 	for _, pool := range poolsSlice {
 		pool = strings.TrimSpace(pool)
 		_, ok := handler.WsPools[pool] //if pool doesn't exist, create pool
