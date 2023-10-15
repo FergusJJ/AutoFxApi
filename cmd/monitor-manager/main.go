@@ -23,7 +23,6 @@ func main() {
 	defer func() {
 		os.Exit(exitCode)
 	}()
-
 	cleanup, err := start()
 	defer cleanup()
 	if err != nil {
